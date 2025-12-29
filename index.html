@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#B8A9E8">
+    <title>One Is Lying</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sound Toggle -->
+    <button class="sound-toggle" id="sound-toggle" title="Toggle Sound">
+        🔊
+    </button>
+
+    <!-- Game Setup Phase -->
+    <div id="setup-phase" class="phase active">
+        <div class="container">
+            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo">
+            <h1 class="game-title">One Is Lying</h1>
+            <div class="setup-section">
+                <label class="input-label">Number of Players</label>
+                <div class="number-input">
+                    <button class="btn-number" id="decrease-players">−</button>
+                    <input type="number" id="player-count" min="3" max="10" value="4" readonly>
+                    <button class="btn-number" id="increase-players">+</button>
+                </div>
+            </div>
+            <div class="setup-section">
+                <label class="input-label">Game Mode</label>
+                <div class="mode-selector">
+                    <button class="mode-btn" data-mode="custom">Custom Word</button>
+                    <button class="mode-btn" data-mode="auto">Auto Generated</button>
+                </div>
+            </div>
+            <button class="btn-primary" id="start-setup">Start Game</button>
+        </div>
+    </div>
+
+    <!-- Player Registration Phase -->
+    <div id="registration-phase" class="phase">
+        <div class="container">
+            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo registration-logo">
+            <h2>Player Registration</h2>
+            <div class="registration-progress">
+                <span id="progress-text">Player 1 of 4</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+            <p class="instruction" id="registration-instruction">Register each player</p>
+            <div id="player-registration-container"></div>
+            <button class="btn-primary" id="complete-registration" disabled>Complete Registration</button>
+        </div>
+    </div>
+
+    <!-- Word Reveal Phase -->
+    <div id="word-reveal-phase" class="phase">
+        <div class="container">
+            <h2>Your Word</h2>
+            <p class="instruction">Click your name to see your word</p>
+            <div id="player-list-reveal"></div>
+        </div>
+    </div>
+
+    <!-- Word Display Overlay -->
+    <div id="word-overlay" class="overlay">
+        <div class="overlay-content">
+            <div class="word-display" id="word-display"></div>
+            <button class="btn-primary" id="got-it-btn">OK, I Got It</button>
+        </div>
+    </div>
+
+    <!-- Pass Device Overlay -->
+    <div id="pass-device-overlay" class="overlay">
+        <div class="overlay-content">
+            <p class="instruction-large">Pass the device to the next player</p>
+        </div>
+    </div>
+
+    <!-- Discussion Phase -->
+    <div id="discussion-phase" class="phase discussion-fullscreen">
+        <div class="container discussion-container">
+            <div class="discussion-content">
+                <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo discussion-logo">
+                <h2>Discussion Time</h2>
+                <div class="timer-display">
+                    <span id="timer">00:00</span>
+                </div>
+                <p class="instruction">Describe your word without revealing it</p>
+            </div>
+            <div class="discussion-action-bar">
+                <button class="btn-primary" id="start-guess">Guess Who Is Lying</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guess Phase -->
+    <div id="guess-phase" class="phase guess-fullscreen">
+        <div class="container guess-container">
+            <div class="guess-content">
+            <h2>Who Is Lying?</h2>
+            <p class="instruction">Select the impostor</p>
+                <div id="player-list-guess" class="player-grid player-grid-guess"></div>
+            </div>
+            <div class="guess-action-bar">
+            <button class="btn-primary" id="confirm-guess" disabled>Confirm Guess</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Phase -->
+    <div id="result-phase" class="phase result-fullscreen">
+        <div class="container result-container">
+            <div class="result-content-wrapper">
+                <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo result-logo">
+                <div id="result-content"></div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-primary" id="play-again">Play Again</button>
+                <button class="btn-secondary" id="change-words">Change Words</button>
+                <button class="btn-secondary" id="change-settings">New Game</button>
+                <button class="btn-secondary" id="exit-game">Exit Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="modal">
+        <div class="modal-content">
+            <h3>Take Photo</h3>
+            <video id="camera-video" autoplay playsinline></video>
+            <canvas id="camera-canvas" style="display: none;"></canvas>
+            <div class="camera-controls">
+                <button class="btn-secondary" id="cancel-camera">Cancel</button>
+                <button class="btn-primary" id="capture-photo">Capture</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Modal (Replaces alert()) -->
+    <div id="game-modal" class="game-modal">
+        <div class="game-modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <button class="btn-primary" id="modal-confirm">OK</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
