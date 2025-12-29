@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#B8A9E8">
-    <title>One Is Lying</title>
+    <meta name="description" content="One Is Lying - A mobile party game where players must identify the impostor based on word descriptions. Perfect for friends sharing one device!">
+    <!-- Version 1.0.0 - 2025-12-30: Production Release -->
+    <title>One Is Lying - Party Game</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=1.0.0"><!-- Cache bust CSS -->
 </head>
 <body>
     <!-- Sound Toggle -->
-    <button class="sound-toggle" id="sound-toggle" title="Toggle Sound">
+    <button class="sound-toggle" id="sound-toggle" title="Toggle Sound" aria-label="Toggle sound" aria-pressed="true">
         🔊
     </button>
 
@@ -40,7 +42,7 @@
     </div>
 
     <!-- Player Registration Phase -->
-    <div id="registration-phase" class="phase">
+    <div id="registration-phase" class="phase" role="main" aria-label="Player registration" aria-hidden="true">
         <div class="container">
             <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo registration-logo">
             <h2>Player Registration</h2>
@@ -57,7 +59,7 @@
     </div>
 
     <!-- Word Reveal Phase -->
-    <div id="word-reveal-phase" class="phase">
+    <div id="word-reveal-phase" class="phase" role="main" aria-label="Word reveal" aria-hidden="true">
         <div class="container">
             <h2>Your Word</h2>
             <p class="instruction">Click your name to see your word</p>
@@ -66,22 +68,22 @@
     </div>
 
     <!-- Word Display Overlay -->
-    <div id="word-overlay" class="overlay">
+    <div id="word-overlay" class="overlay" role="dialog" aria-labelledby="word-display" aria-hidden="true">
         <div class="overlay-content">
-            <div class="word-display" id="word-display"></div>
-            <button class="btn-primary" id="got-it-btn">OK, I Got It</button>
+            <div class="word-display" id="word-display" role="alert" aria-live="polite"></div>
+            <button class="btn-primary" id="got-it-btn" aria-label="Confirm you saw your word">OK, I Got It</button>
         </div>
     </div>
 
     <!-- Pass Device Overlay -->
-    <div id="pass-device-overlay" class="overlay">
+    <div id="pass-device-overlay" class="overlay" role="alert" aria-live="polite" aria-hidden="true">
         <div class="overlay-content">
             <p class="instruction-large">Pass the device to the next player</p>
         </div>
     </div>
 
     <!-- Discussion Phase -->
-    <div id="discussion-phase" class="phase discussion-fullscreen">
+    <div id="discussion-phase" class="phase discussion-fullscreen" role="main" aria-label="Discussion phase" aria-hidden="true">
         <div class="container discussion-container">
             <div class="discussion-content">
                 <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo discussion-logo">
@@ -98,7 +100,7 @@
     </div>
 
     <!-- Guess Phase -->
-    <div id="guess-phase" class="phase guess-fullscreen">
+    <div id="guess-phase" class="phase guess-fullscreen" role="main" aria-label="Guess phase" aria-hidden="true">
         <div class="container guess-container">
             <div class="guess-content">
             <h2>Who Is Lying?</h2>
@@ -112,7 +114,7 @@
     </div>
 
     <!-- Result Phase -->
-    <div id="result-phase" class="phase result-fullscreen">
+    <div id="result-phase" class="phase result-fullscreen" role="main" aria-label="Results" aria-hidden="true">
         <div class="container result-container">
             <div class="result-content-wrapper">
                 <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo result-logo">
@@ -128,28 +130,28 @@
     </div>
 
     <!-- Camera Modal -->
-    <div id="camera-modal" class="modal">
+    <div id="camera-modal" class="modal" role="dialog" aria-labelledby="camera-modal-title" aria-hidden="true">
         <div class="modal-content">
-            <h3>Take Photo</h3>
-            <video id="camera-video" autoplay playsinline></video>
-            <canvas id="camera-canvas" style="display: none;"></canvas>
+            <h3 id="camera-modal-title">Take Photo</h3>
+            <video id="camera-video" autoplay playsinline aria-label="Camera preview"></video>
+            <canvas id="camera-canvas" style="display: none;" aria-hidden="true"></canvas>
             <div class="camera-controls">
-                <button class="btn-secondary" id="cancel-camera">Cancel</button>
-                <button class="btn-primary" id="capture-photo">Capture</button>
+                <button class="btn-secondary" id="cancel-camera" aria-label="Cancel photo capture">Cancel</button>
+                <button class="btn-primary" id="capture-photo" aria-label="Capture photo">Capture</button>
             </div>
         </div>
     </div>
 
     <!-- Game Modal (Replaces alert()) -->
-    <div id="game-modal" class="game-modal">
+    <div id="game-modal" class="game-modal" role="dialog" aria-labelledby="modal-title" aria-describedby="modal-message" aria-hidden="true">
         <div class="game-modal-content">
             <h3 id="modal-title"></h3>
             <p id="modal-message"></p>
-            <button class="btn-primary" id="modal-confirm">OK</button>
+            <button class="btn-primary" id="modal-confirm" aria-label="Confirm">OK</button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=1.0.0"></script><!-- Cache bust JS -->
 </body>
 </html>
 

@@ -1,40 +1,66 @@
-// Sound System
+/* Version 1.0.0 - 2025-12-30
+   Production Release
+   Changelog:
+   - v1.0.0: Production release - optimized performance, accessibility, error handling, and mobile camera support
+   - v5.0: Enhanced iPhone/iOS camera support with proper constraints, grand celebratory Result phase
+   - v4.0: Viewport fixes and safe-area helpers for mobile
+   - v3.0: Initial mobile responsive fixes
+*/
+
+// Production error handler (silent for user-facing errors)
+const handleError = (error, context = '') => {
+    // In production, errors are handled gracefully without console output
+    // Logging can be enabled for debugging by setting window.DEBUG = true
+    if (window.DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error(`[${context}]`, error);
+    }
+};
+
+// Application version
+const APP_VERSION = '1.0.0';
+
+// Sound System with lazy loading
 const SoundManager = {
     enabled: true,
-    sounds: {
-        click: null,
-        reveal: null,
-        win: null,
-        lose: null,
-        success: null
-    },
+    sounds: {},
+    loaded: false,
     
     init() {
-        // Create audio objects (using Web Audio API for better control)
+        // Lazy load sounds only when needed
+        this.loadSounds();
+        this.loaded = true;
+    },
+    
+    loadSounds() {
+        if (this.loaded) return;
+        
         try {
-            this.sounds.click = new Audio('sounds/click.mp3');
-            this.sounds.reveal = new Audio('sounds/reveal.mp3');
-            this.sounds.win = new Audio('sounds/win.mp3');
-            this.sounds.lose = new Audio('sounds/lose.mp3');
-            this.sounds.success = new Audio('sounds/success.mp3');
-            
-            // Set volume
-            Object.values(this.sounds).forEach(sound => {
-                if (sound) {
-                    sound.volume = 0.5;
+            const soundFiles = ['click', 'reveal', 'win', 'lose', 'success'];
+            soundFiles.forEach(name => {
+                try {
+                    this.sounds[name] = new Audio(`sounds/${name}.mp3`);
+                    this.sounds[name].volume = 0.5;
+                    this.sounds[name].preload = 'auto';
+                } catch (e) {
+                    handleError(e, 'SoundManager.loadSounds');
                 }
             });
         } catch (error) {
-            console.log('Sound files not found, continuing without sound');
+            handleError(error, 'SoundManager.init');
         }
     },
     
     play(soundName) {
-        if (!this.enabled) return;
+        if (!this.enabled || !this.sounds[soundName]) return;
         const sound = this.sounds[soundName];
-        if (sound) {
+        try {
             sound.currentTime = 0;
-            sound.play().catch(e => console.log('Sound play failed:', e));
+            sound.play().catch(() => {
+                // Silent fail - user may have audio disabled
+            });
+        } catch (error) {
+            handleError(error, 'SoundManager.play');
         }
     },
     
@@ -43,40 +69,137 @@ const SoundManager = {
         const toggle = document.getElementById('sound-toggle');
         if (toggle) {
             toggle.textContent = this.enabled ? '🔊' : '🔇';
+            toggle.setAttribute('aria-label', this.enabled ? 'Mute sound' : 'Unmute sound');
             toggle.classList.toggle('muted', !this.enabled);
         }
-        // Play sound on toggle if enabling
         if (this.enabled) {
             this.play('click');
         }
     }
 };
 
-// Confetti System
+// Enhanced Confetti System for Result Phase (optimized performance)
+const confettiPool = {
+    elements: [],
+    maxElements: 350,
+    
+    createElement() {
+        const el = document.createElement('div');
+        el.style.position = 'fixed';
+        el.style.pointerEvents = 'none';
+        el.style.zIndex = '9999';
+        return el;
+    },
+    
+    getElement() {
+        if (this.elements.length > 0) {
+            return this.elements.pop();
+        }
+        return this.createElement();
+    },
+    
+    recycleElement(el) {
+        if (this.elements.length < this.maxElements) {
+            el.style.cssText = '';
+            this.elements.push(el);
+        } else {
+            el.remove();
+        }
+    }
+};
+
 function createConfetti() {
-    const colors = ['#B8A9E8', '#A8D5E2', '#B5E5CF', '#FFD4B3', '#FFE5A0', '#FFB3BA', '#E8D5FF'];
-    const confettiCount = 50;
+    const colors = ['#B8A9E8', '#A8D5E2', '#B5E5CF', '#FFD4B3', '#FFE5A0', '#FFB3BA', '#E8D5FF', '#8B5CF6', '#EC4899', '#10B981'];
+    const confettiCount = 150;
+    
+    // Clear existing confetti efficiently
+    document.querySelectorAll('.confetti').forEach(el => confettiPool.recycleElement(el));
+    
+    // Batch DOM updates using DocumentFragment
+    const fragment = document.createDocumentFragment();
+    const elements = [];
     
     for (let i = 0; i < confettiCount; i++) {
         setTimeout(() => {
-            const confetti = document.createElement('div');
+            const confetti = confettiPool.getElement();
             confetti.className = 'confetti';
             confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '-10px';
             confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
             confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.width = (Math.random() * 12 + 6) + 'px';
+            confetti.style.height = confetti.style.width;
+            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0%';
+            confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+            confetti.style.opacity = '1';
+            fragment.appendChild(confetti);
+            elements.push(confetti);
+            
+            if (i === confettiCount - 1 || i % 20 === 0) {
+                document.body.appendChild(fragment);
+            }
+        }, i * 15);
+    }
+    
+    // Cleanup after animation
+    setTimeout(() => {
+        elements.forEach(el => {
+            el.style.opacity = '0';
+            setTimeout(() => confettiPool.recycleElement(el), 500);
+        });
+    }, 3500);
+}
+
+// Grand confetti burst for Result phase (centered explosion effect)
+function createGrandConfettiBurst() {
+    const colors = ['#B8A9E8', '#A8D5E2', '#B5E5CF', '#FFD4B3', '#FFE5A0', '#FFB3BA', '#E8D5FF', '#8B5CF6', '#EC4899', '#10B981'];
+    const burstCount = 200;
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const fragment = document.createDocumentFragment();
+    const elements = [];
+    
+    document.querySelectorAll('.confetti-burst').forEach(el => confettiPool.recycleElement(el));
+    
+    for (let i = 0; i < burstCount; i++) {
+        setTimeout(() => {
+            const confetti = confettiPool.getElement();
+            confetti.className = 'confetti-burst';
+            const angle = (Math.PI * 2 * i) / burstCount;
+            const velocity = Math.random() * 300 + 200;
+            const distanceX = Math.cos(angle) * velocity;
+            const distanceY = Math.sin(angle) * velocity;
+            
+            confetti.style.left = centerX + 'px';
+            confetti.style.top = centerY + 'px';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
             confetti.style.width = (Math.random() * 10 + 5) + 'px';
             confetti.style.height = confetti.style.width;
-            document.body.appendChild(confetti);
+            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0%';
+            confetti.style.setProperty('--distance-x', distanceX + 'px');
+            confetti.style.setProperty('--distance-y', distanceY + 'px');
+            confetti.style.setProperty('--rotation', Math.random() * 720 + 'deg');
+            fragment.appendChild(confetti);
+            elements.push(confetti);
             
-            setTimeout(() => confetti.remove(), 3000);
-        }, i * 20);
+            if (i === burstCount - 1 || i % 30 === 0) {
+                document.body.appendChild(fragment);
+            }
+        }, i * 10);
     }
+    
+    setTimeout(() => {
+        elements.forEach(el => {
+            el.style.opacity = '0';
+            setTimeout(() => confettiPool.recycleElement(el), 500);
+        });
+    }, 4000);
 }
 
 // Game State
 const gameState = {
     playerCount: 4,
-    gameMode: null, // 'custom' or 'auto'
+    gameMode: null,
     wordPool: [],
     commonWord: null,
     impostorWord: null,
@@ -89,173 +212,248 @@ const gameState = {
     impostorPlayerIndex: null
 };
 
-// DOM Elements
-const phases = {
-    setup: document.getElementById('setup-phase'),
-    registration: document.getElementById('registration-phase'),
-    wordReveal: document.getElementById('word-reveal-phase'),
-    discussion: document.getElementById('discussion-phase'),
-    guess: document.getElementById('guess-phase'),
-    result: document.getElementById('result-phase')
+// Cached DOM Elements (performance optimization)
+const DOM = {
+    phases: {},
+    modals: {},
+    buttons: {},
+    inputs: {},
+    containers: {},
+    
+    init() {
+        // Cache all frequently accessed DOM elements
+        this.phases = {
+            setup: document.getElementById('setup-phase'),
+            registration: document.getElementById('registration-phase'),
+            wordReveal: document.getElementById('word-reveal-phase'),
+            discussion: document.getElementById('discussion-phase'),
+            guess: document.getElementById('guess-phase'),
+            result: document.getElementById('result-phase')
+        };
+        
+        this.modals = {
+            game: document.getElementById('game-modal'),
+            camera: document.getElementById('camera-modal'),
+            wordOverlay: document.getElementById('word-overlay'),
+            passOverlay: document.getElementById('pass-device-overlay')
+        };
+        
+        this.containers = {
+            registration: document.getElementById('player-registration-container'),
+            reveal: document.getElementById('player-list-reveal'),
+            guess: document.getElementById('player-list-guess'),
+            result: document.getElementById('result-content')
+        };
+        
+        this.inputs = {
+            playerCount: document.getElementById('player-count')
+        };
+    }
 };
 
 // Modal System (Replaces alert())
 function showModal(title, message) {
-    const modal = document.getElementById('game-modal');
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').textContent = message;
+    const modal = DOM.modals.game;
+    if (!modal) return;
+    
+    const titleEl = document.getElementById('modal-title');
+    const messageEl = document.getElementById('modal-message');
+    
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    
     modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
     SoundManager.play('click');
+    
+    // Focus management for accessibility
+    const confirmBtn = document.getElementById('modal-confirm');
+    if (confirmBtn) {
+        setTimeout(() => confirmBtn.focus(), 100);
+    }
 }
 
 function hideModal() {
-    const modal = document.getElementById('game-modal');
-    modal.classList.remove('active');
+    const modal = DOM.modals.game;
+    if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
 }
 
-// Initialize
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
+    DOM.init();
     SoundManager.init();
+    setupViewportFixes();
     initializeEventListeners();
     initializeSoundToggle();
     
     // Modal confirm button
-    document.getElementById('modal-confirm').addEventListener('click', () => {
-        const modal = document.getElementById('game-modal');
-        const onConfirm = modal.dataset.onConfirm;
-        
-        hideModal();
-        
-        // Handle special cases
-        if (onConfirm === 'exit') {
-            changeSettings();
-        }
-        
-        // Clear callback
-        delete modal.dataset.onConfirm;
-    });
+    const modalConfirm = document.getElementById('modal-confirm');
+    if (modalConfirm) {
+        modalConfirm.addEventListener('click', () => {
+            const modal = DOM.modals.game;
+            const onConfirm = modal?.dataset?.onConfirm;
+            
+            hideModal();
+            
+            if (onConfirm === 'exit') {
+                changeSettings();
+            }
+            
+            if (modal) {
+                delete modal.dataset.onConfirm;
+            }
+        });
+    }
+    
+    // Set version attribute for debugging
+    document.documentElement.setAttribute('data-app-version', APP_VERSION);
 });
 
 function initializeSoundToggle() {
     const toggle = document.getElementById('sound-toggle');
     if (toggle) {
+        toggle.setAttribute('aria-label', 'Toggle sound');
         toggle.addEventListener('click', () => {
             SoundManager.toggle();
-            SoundManager.play('click');
         });
     }
 }
 
 function initializeEventListeners() {
     // Setup phase
-    document.getElementById('decrease-players').addEventListener('click', () => {
-        if (gameState.playerCount > 3) {
-            gameState.playerCount--;
-            document.getElementById('player-count').value = gameState.playerCount;
-            SoundManager.play('click');
-        }
-    });
-
-    document.getElementById('increase-players').addEventListener('click', () => {
-        if (gameState.playerCount < 10) {
-            gameState.playerCount++;
-            document.getElementById('player-count').value = gameState.playerCount;
-            SoundManager.play('click');
-        }
-    });
-
+    const decreaseBtn = document.getElementById('decrease-players');
+    const increaseBtn = document.getElementById('increase-players');
+    const startBtn = document.getElementById('start-setup');
+    
+    if (decreaseBtn) {
+        decreaseBtn.addEventListener('click', () => {
+            if (gameState.playerCount > 3) {
+                gameState.playerCount--;
+                if (DOM.inputs.playerCount) {
+                    DOM.inputs.playerCount.value = gameState.playerCount;
+                }
+                SoundManager.play('click');
+            }
+        });
+    }
+    
+    if (increaseBtn) {
+        increaseBtn.addEventListener('click', () => {
+            if (gameState.playerCount < 10) {
+                gameState.playerCount++;
+                if (DOM.inputs.playerCount) {
+                    DOM.inputs.playerCount.value = gameState.playerCount;
+                }
+                SoundManager.play('click');
+            }
+        });
+    }
+    
     document.querySelectorAll('.mode-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             gameState.gameMode = e.target.dataset.mode;
+            e.target.setAttribute('aria-pressed', 'true');
             SoundManager.play('click');
         });
     });
-
-    document.getElementById('start-setup').addEventListener('click', () => {
-        SoundManager.play('click');
-        startGameSetup();
-    });
-
-    // Word input phase - removed (words now entered during registration)
-
+    
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            SoundManager.play('click');
+            startGameSetup();
+        });
+    }
+    
     // Registration phase
-    document.getElementById('complete-registration').addEventListener('click', () => {
-        SoundManager.play('success');
-        handleRegistrationSubmit();
-    });
-
+    const completeReg = document.getElementById('complete-registration');
+    if (completeReg) {
+        completeReg.addEventListener('click', () => {
+            SoundManager.play('success');
+            handleRegistrationSubmit();
+        });
+    }
+    
     // Word reveal phase
-    document.getElementById('got-it-btn').addEventListener('click', () => {
-        SoundManager.play('click');
-        hideWord();
-    });
-
+    const gotItBtn = document.getElementById('got-it-btn');
+    if (gotItBtn) {
+        gotItBtn.addEventListener('click', () => {
+            SoundManager.play('click');
+            hideWord();
+        });
+    }
+    
     // Discussion phase
-    document.getElementById('start-guess').addEventListener('click', () => {
-        SoundManager.play('click');
-        startGuessPhase();
-    });
-
+    const startGuess = document.getElementById('start-guess');
+    if (startGuess) {
+        startGuess.addEventListener('click', () => {
+            SoundManager.play('click');
+            startGuessPhase();
+        });
+    }
+    
     // Guess phase
-    document.getElementById('confirm-guess').addEventListener('click', () => {
-        SoundManager.play('success');
-        confirmGuess();
-    });
-
+    const confirmGuess = document.getElementById('confirm-guess');
+    if (confirmGuess) {
+        confirmGuess.addEventListener('click', () => {
+            SoundManager.play('success');
+            confirmGuessFn();
+        });
+    }
+    
     // Result phase
-    document.getElementById('play-again').addEventListener('click', () => {
-        SoundManager.play('click');
-        playAgain();
-    });
-    document.getElementById('change-words').addEventListener('click', () => {
-        SoundManager.play('click');
-        changeWords();
-    });
-    document.getElementById('change-settings').addEventListener('click', () => {
-        SoundManager.play('click');
-        changeSettings();
-    });
-    document.getElementById('exit-game').addEventListener('click', () => {
-        SoundManager.play('click');
-        exitGame();
-    });
-
+    const playAgain = document.getElementById('play-again');
+    const changeWords = document.getElementById('change-words');
+    const changeSettings = document.getElementById('change-settings');
+    const exitGame = document.getElementById('exit-game');
+    
+    if (playAgain) playAgain.addEventListener('click', () => { SoundManager.play('click'); playAgainFn(); });
+    if (changeWords) changeWords.addEventListener('click', () => { SoundManager.play('click'); changeWordsFn(); });
+    if (changeSettings) changeSettings.addEventListener('click', () => { SoundManager.play('click'); changeSettings(); });
+    if (exitGame) exitGame.addEventListener('click', () => { SoundManager.play('click'); exitGameFn(); });
+    
     // Camera
-    document.getElementById('cancel-camera').addEventListener('click', () => {
-        SoundManager.play('click');
-        closeCamera();
-    });
-    document.getElementById('capture-photo').addEventListener('click', () => {
-        SoundManager.play('click');
-        capturePhoto();
-    });
+    const cancelCamera = document.getElementById('cancel-camera');
+    const capturePhoto = document.getElementById('capture-photo');
+    
+    if (cancelCamera) cancelCamera.addEventListener('click', () => { SoundManager.play('click'); closeCamera(); });
+    if (capturePhoto) capturePhoto.addEventListener('click', () => { SoundManager.play('click'); capturePhotoFn(); });
 }
 
 // Phase Management
 function showPhase(phaseName) {
-    Object.values(phases).forEach(phase => phase.classList.remove('active'));
-    if (phases[phaseName]) {
-        phases[phaseName].classList.add('active');
+    Object.values(DOM.phases).forEach(phase => {
+        if (phase) {
+            phase.classList.remove('active');
+            phase.setAttribute('aria-hidden', 'true');
+        }
+    });
+    
+    const phase = DOM.phases[phaseName];
+    if (phase) {
+        phase.classList.add('active');
+        phase.setAttribute('aria-hidden', 'false');
+        phase.scrollTop = 0;
     }
 }
 
 // Game Setup
 function startGameSetup() {
     if (!gameState.gameMode) {
-        alert('Please select a game mode');
+        showModal('Mode Required', 'Please select a game mode');
         return;
     }
-
+    
     if (gameState.gameMode === 'auto') {
         generateAutoWords();
     } else {
         showRegistrationPhase();
     }
 }
-
-// Word input phase removed - words now entered during registration
 
 // Simple Word Database - Extremely Common Words Only
 const SIMPLE_WORDS = {
@@ -266,21 +464,17 @@ const SIMPLE_WORDS = {
     actions: ['sleep', 'eat', 'walk', 'run', 'jump', 'sit', 'stand', 'talk', 'read', 'write', 'play', 'dance']
 };
 
-// Word Categories for Pairing
 const WORD_CATEGORIES = Object.keys(SIMPLE_WORDS);
 
 // Auto Generated Words - Simple Words Only
 function generateAutoWords() {
     try {
-        // Select a random category
         const category = WORD_CATEGORIES[Math.floor(Math.random() * WORD_CATEGORIES.length)];
         const words = SIMPLE_WORDS[category];
         
-        // Get two different words from the same category
         let word1Index = Math.floor(Math.random() * words.length);
         let word2Index = Math.floor(Math.random() * words.length);
         
-        // Ensure different words
         while (word2Index === word1Index) {
             word2Index = Math.floor(Math.random() * words.length);
         }
@@ -290,8 +484,7 @@ function generateAutoWords() {
         
         showRegistrationPhase();
     } catch (error) {
-        console.error('Error generating words:', error);
-        // Fallback to simple defaults
+        handleError(error, 'generateAutoWords');
         gameState.commonWord = 'cup';
         gameState.impostorWord = 'glass';
         showRegistrationPhase();
@@ -300,7 +493,6 @@ function generateAutoWords() {
 
 // Player Registration
 function showRegistrationPhase() {
-    // Initialize players array if empty
     if (gameState.players.length === 0) {
         gameState.players = [];
         for (let i = 0; i < gameState.playerCount; i++) {
@@ -319,7 +511,7 @@ function showRegistrationPhase() {
 }
 
 function showCurrentPlayerRegistration() {
-    const container = document.getElementById('player-registration-container');
+    const container = DOM.containers.registration;
     const instruction = document.getElementById('registration-instruction');
     const submitBtn = document.getElementById('complete-registration');
     const currentIndex = gameState.currentRegistrationIndex;
@@ -328,7 +520,6 @@ function showCurrentPlayerRegistration() {
     const playerCount = gameState.playerCount;
     const progressPercent = ((currentIndex + 1) / playerCount) * 100;
     
-    // Update progress indicator
     const progressText = document.getElementById('progress-text');
     const progressFill = document.getElementById('progress-fill');
     
@@ -340,7 +531,6 @@ function showCurrentPlayerRegistration() {
         progressFill.style.width = `${progressPercent}%`;
     }
     
-    // Update instruction
     if (instruction) {
         const playerNum = currentIndex + 1;
         instruction.textContent = isCustomMode 
@@ -348,29 +538,30 @@ function showCurrentPlayerRegistration() {
             : `Player ${playerNum}: Enter your name`;
     }
     
-    // Update button text
     if (submitBtn) {
         submitBtn.textContent = isLastPlayer ? 'Complete Registration' : 'Next Player';
         submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-label', isLastPlayer ? 'Complete registration for all players' : 'Continue to next player');
     }
+    
+    if (!container) return;
     
     container.innerHTML = '';
     
     const player = gameState.players[currentIndex];
     
-    // Ensure words array exists for custom mode
     if (isCustomMode && !player.words) {
         player.words = ['', ''];
     }
     
     const wordInputsHTML = isCustomMode ? `
         <div class="word-input-group">
-            <label>Word 1</label>
-            <input type="text" class="player-word-input" placeholder="Enter word 1" data-word="0" value="${(player.words && player.words[0]) || ''}">
+            <label for="word-input-0">Word 1</label>
+            <input type="text" class="player-word-input" id="word-input-0" placeholder="Enter word 1" data-word="0" value="${(player.words && player.words[0]) || ''}" aria-label="Enter first word">
         </div>
         <div class="word-input-group">
-            <label>Word 2</label>
-            <input type="text" class="player-word-input" placeholder="Enter word 2" data-word="1" value="${(player.words && player.words[1]) || ''}">
+            <label for="word-input-1">Word 2</label>
+            <input type="text" class="player-word-input" id="word-input-1" placeholder="Enter word 2" data-word="1" value="${(player.words && player.words[1]) || ''}" aria-label="Enter second word">
         </div>
     ` : '';
     
@@ -379,34 +570,36 @@ function showCurrentPlayerRegistration() {
     item.innerHTML = `
         <h3>Player ${currentIndex + 1}</h3>
         <div class="avatar-container">
-            <img class="avatar-preview" id="avatar-preview-current" style="display: ${player.avatar ? 'block' : 'none'};">
-            <div class="avatar-placeholder" id="avatar-placeholder-current" style="display: ${player.avatar ? 'none' : 'flex'};">👤</div>
+            <img class="avatar-preview" id="avatar-preview-current" style="display: ${player.avatar ? 'block' : 'none'};" alt="Player ${currentIndex + 1} avatar">
+            <div class="avatar-placeholder" id="avatar-placeholder-current" style="display: ${player.avatar ? 'none' : 'flex'};" aria-label="Avatar placeholder">👤</div>
         </div>
-        <button class="camera-btn" id="camera-btn-current">📷 Take Photo</button>
-        <input type="text" class="player-name-input" placeholder="Enter name" value="${player.name || ''}" id="player-name-current">
+        <button class="camera-btn" id="camera-btn-current" aria-label="Take photo for player ${currentIndex + 1}">📷 Take Photo</button>
+        <input type="text" class="player-name-input" id="player-name-current" placeholder="Enter name" value="${player.name || ''}" aria-label="Enter player name" autocomplete="name">
         ${wordInputsHTML}
     `;
     container.appendChild(item);
     
-    // Set avatar preview if exists
     if (player.avatar) {
         const preview = document.getElementById('avatar-preview-current');
-        preview.src = player.avatar;
+        if (preview) preview.src = player.avatar;
     }
     
-    // Add event listeners
-    document.getElementById('camera-btn-current').addEventListener('click', () => {
-        SoundManager.play('click');
-        openCamera(currentIndex);
-    });
+    const cameraBtn = document.getElementById('camera-btn-current');
+    if (cameraBtn) {
+        cameraBtn.addEventListener('click', () => {
+            SoundManager.play('click');
+            openCamera(currentIndex);
+        });
+    }
     
     const nameInput = document.getElementById('player-name-current');
-    nameInput.addEventListener('input', (e) => {
-        player.name = e.target.value.trim();
-        validateCurrentPlayerRegistration();
-    });
+    if (nameInput) {
+        nameInput.addEventListener('input', (e) => {
+            player.name = e.target.value.trim();
+            validateCurrentPlayerRegistration();
+        });
+    }
     
-    // Add word input listeners for custom mode
     if (isCustomMode) {
         if (!player.words) {
             player.words = ['', ''];
@@ -441,13 +634,12 @@ function validateCurrentPlayerRegistration() {
     
     if (submitBtn) {
         submitBtn.disabled = !isValid;
+        submitBtn.setAttribute('aria-disabled', !isValid);
     }
 }
 
 function handleRegistrationSubmit() {
     const currentIndex = gameState.currentRegistrationIndex;
-    
-    // Validate current player
     const player = gameState.players[currentIndex];
     const hasName = player.name.trim() !== '';
     
@@ -464,61 +656,128 @@ function handleRegistrationSubmit() {
         }
     }
     
-    // Move to next player or complete registration
     if (currentIndex < gameState.playerCount - 1) {
         gameState.currentRegistrationIndex++;
         showCurrentPlayerRegistration();
     } else {
-        // All players registered, process and assign words
         completeRegistration();
     }
 }
 
-// Old validateRegistration removed - using validateCurrentPlayerRegistration instead
-
+// Enhanced camera function for iPhone/iOS Safari compatibility
 function openCamera(playerId) {
-    const modal = document.getElementById('camera-modal');
+    const modal = DOM.modals.camera;
+    const video = document.getElementById('camera-video');
+    
+    if (!modal || !video) return;
+    
     modal.dataset.playerId = playerId;
     modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(stream => {
-            const video = document.getElementById('camera-video');
-            video.srcObject = stream;
-            video.play();
-            modal.dataset.stream = 'active';
-        })
-        .catch(error => {
-            console.error('Camera error:', error);
-            alert('Could not access camera. You can continue without a photo.');
+    const constraints = {
+        video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 640, max: 1280 },
+            height: { ideal: 480, max: 720 },
+            aspectRatio: { ideal: 4/3 }
+        },
+        audio: false
+    };
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('webkit-playsinline', 'true');
+                video.muted = true;
+                
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            modal.dataset.stream = 'active';
+                        })
+                        .catch(() => {
+                            // iOS Safari autoplay quirk - retry after delay
+                            setTimeout(() => {
+                                video.play().catch(() => {
+                                    // Silent fail
+                                });
+                            }, 100);
+                        });
+                }
+            })
+            .catch(() => {
+                // Fallback: try without constraints
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        video.setAttribute('playsinline', 'true');
+                        video.muted = true;
+                        video.play().catch(() => {
+                            // Silent fail
+                        });
+                        modal.dataset.stream = 'active';
+                    })
+                    .catch(() => {
+                        showModal('Camera Access', 'Could not access camera. You can continue without a photo.');
+                        closeCamera();
+                    });
+            });
+    } else {
+        const getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        if (getUserMedia) {
+            getUserMedia.call(navigator, { video: true, audio: false },
+                stream => {
+                    video.srcObject = stream;
+                    video.setAttribute('playsinline', 'true');
+                    video.muted = true;
+                    video.play();
+                    modal.dataset.stream = 'active';
+                },
+                () => {
+                    showModal('Camera Access', 'Could not access camera. You can continue without a photo.');
+                    closeCamera();
+                }
+            );
+        } else {
+            showModal('Camera Not Supported', 'Your browser does not support camera access.');
             closeCamera();
-        });
+        }
+    }
 }
 
 function closeCamera() {
-    const modal = document.getElementById('camera-modal');
+    const modal = DOM.modals.camera;
     const video = document.getElementById('camera-video');
     
-    if (video.srcObject) {
+    if (video && video.srcObject) {
         video.srcObject.getTracks().forEach(track => track.stop());
         video.srcObject = null;
     }
     
-    modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
 }
 
-function capturePhoto() {
-    const modal = document.getElementById('camera-modal');
-    const playerId = parseInt(modal.dataset.playerId);
+function capturePhotoFn() {
+    const modal = DOM.modals.camera;
+    const playerId = parseInt(modal?.dataset?.playerId);
     const video = document.getElementById('camera-video');
     const canvas = document.getElementById('camera-canvas');
+    
+    if (!video || !canvas || playerId === undefined) return;
+    
     const context = canvas.getContext('2d');
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0);
 
-    // Convert to circular avatar
     const img = new Image();
     img.onload = () => {
         const size = Math.min(img.width, img.height);
@@ -538,7 +797,6 @@ function capturePhoto() {
         const avatarData = canvas.toDataURL('image/png');
         gameState.players[playerId].avatar = avatarData;
         
-        // Update preview (check if it's the current registration view)
         const preview = document.getElementById('avatar-preview-current');
         const placeholder = document.getElementById('avatar-placeholder-current');
         if (preview && placeholder) {
@@ -553,9 +811,7 @@ function capturePhoto() {
 }
 
 function completeRegistration() {
-    // Process words for custom mode
     if (gameState.gameMode === 'custom') {
-        // Collect all words from players
         gameState.wordPool = [];
         gameState.players.forEach(player => {
             if (player.words && player.words.length === 2) {
@@ -564,7 +820,6 @@ function completeRegistration() {
             }
         });
         
-        // Remove duplicates
         gameState.wordPool = [...new Set(gameState.wordPool)];
         
         if (gameState.wordPool.length < 2) {
@@ -572,13 +827,11 @@ function completeRegistration() {
             return;
         }
         
-        // Randomly select common and impostor words
         const shuffled = [...gameState.wordPool].sort(() => Math.random() - 0.5);
         gameState.commonWord = shuffled[0];
         gameState.impostorWord = shuffled[1] || shuffled[0];
     }
     
-    // Assign words randomly
     const impostorIndex = Math.floor(Math.random() * gameState.playerCount);
     gameState.impostorPlayerIndex = impostorIndex;
     
@@ -590,7 +843,6 @@ function completeRegistration() {
         }
     });
 
-    // Reset reveal tracking
     gameState.revealedPlayers.clear();
     
     showWordRevealPhase();
@@ -598,18 +850,18 @@ function completeRegistration() {
 
 // Word Reveal Phase
 function showWordRevealPhase() {
-    const container = document.getElementById('player-list-reveal');
+    const container = DOM.containers.reveal;
+    if (!container) return;
+    
     const playerCount = gameState.players.length;
     
-    // Determine grid layout class based on player count
-    let gridClass = 'player-grid-few'; // 3-4 players
+    let gridClass = 'player-grid-few';
     if (playerCount >= 5 && playerCount <= 6) {
         gridClass = 'player-grid-medium';
     } else if (playerCount >= 7) {
         gridClass = 'player-grid-many';
     }
     
-    // Apply grid classes
     container.className = `player-grid player-grid-reveal ${gridClass}`;
     container.innerHTML = '';
     
@@ -617,25 +869,35 @@ function showWordRevealPhase() {
         const item = document.createElement('div');
         item.className = 'player-grid-item';
         item.dataset.playerId = index;
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('aria-label', `Reveal word for ${player.name}`);
         
-        // Add revealed class if already seen
         if (gameState.revealedPlayers.has(index)) {
             item.classList.add('revealed');
+            item.setAttribute('aria-disabled', 'true');
         }
         
         item.innerHTML = `
             ${player.avatar 
                 ? `<img src="${player.avatar}" class="player-avatar" alt="${player.name}">`
-                : `<div class="player-avatar-placeholder">👤</div>`
+                : `<div class="player-avatar-placeholder" aria-hidden="true">👤</div>`
             }
             <span class="player-name">${player.name}</span>
         `;
         
-        // Only add click listener if not revealed
         if (!gameState.revealedPlayers.has(index)) {
-            item.addEventListener('click', () => {
+            const handleClick = () => {
                 SoundManager.play('click');
                 revealWord(index);
+            };
+            
+            item.addEventListener('click', handleClick);
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                }
             });
         }
         
@@ -647,30 +909,36 @@ function showWordRevealPhase() {
 
 function revealWord(playerIndex) {
     const player = gameState.players[playerIndex];
-    const overlay = document.getElementById('word-overlay');
+    const overlay = DOM.modals.wordOverlay;
     const wordDisplay = document.getElementById('word-display');
+    
+    if (!overlay || !wordDisplay) return;
     
     wordDisplay.textContent = player.word.toUpperCase();
     overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
     overlay.dataset.playerId = playerIndex;
     SoundManager.play('reveal');
 }
 
 function hideWord() {
-    const overlay = document.getElementById('word-overlay');
-    const passOverlay = document.getElementById('pass-device-overlay');
-    const playerIndex = parseInt(overlay.dataset.playerId);
+    const overlay = DOM.modals.wordOverlay;
+    const passOverlay = DOM.modals.passOverlay;
+    const playerIndex = parseInt(overlay?.dataset?.playerId);
+    
+    if (!overlay || !passOverlay) return;
     
     overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
     passOverlay.classList.add('active');
+    passOverlay.setAttribute('aria-hidden', 'false');
     
     setTimeout(() => {
         passOverlay.classList.remove('active');
+        passOverlay.setAttribute('aria-hidden', 'true');
         
-        // Mark player as revealed
         gameState.revealedPlayers.add(playerIndex);
         
-        // Check if all players have seen their words
         if (gameState.revealedPlayers.size === gameState.playerCount) {
             startDiscussionPhase();
         } else {
@@ -686,22 +954,27 @@ function startDiscussionPhase() {
 }
 
 function showDiscussionPhase() {
-    // Player list removed - not needed during discussion
     showPhase('discussion');
 }
 
 function startTimer() {
     gameState.timerStart = Date.now();
     const timerDisplay = document.getElementById('timer');
-    const timerContainer = timerDisplay.closest('.timer-display');
+    const timerContainer = timerDisplay?.closest('.timer-display');
+    
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+    }
     
     gameState.timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - gameState.timerStart) / 1000);
         const minutes = Math.floor(elapsed / 60);
         const seconds = elapsed % 60;
-        timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
-        // Add visual urgency after 2 minutes (optional)
+        if (timerDisplay) {
+            timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
         if (elapsed > 120 && timerContainer) {
             timerContainer.classList.add('timer-urgent');
         }
@@ -722,10 +995,11 @@ function startGuessPhase() {
 }
 
 function showGuessPhase() {
-    const container = document.getElementById('player-list-guess');
+    const container = DOM.containers.guess;
+    if (!container) return;
+    
     const playerCount = gameState.players.length;
     
-    // Determine grid layout class
     let gridClass = 'player-grid-few';
     if (playerCount >= 5 && playerCount <= 6) {
         gridClass = 'player-grid-medium';
@@ -733,7 +1007,6 @@ function showGuessPhase() {
         gridClass = 'player-grid-many';
     }
     
-    // Apply grid classes
     container.className = `player-grid player-grid-guess ${gridClass}`;
     container.innerHTML = '';
     
@@ -741,22 +1014,36 @@ function showGuessPhase() {
         const item = document.createElement('div');
         item.className = 'player-grid-item';
         item.dataset.playerId = index;
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('aria-label', `Select ${player.name} as impostor`);
         
         item.innerHTML = `
             ${player.avatar 
                 ? `<img src="${player.avatar}" class="player-avatar" alt="${player.name}">`
-                : `<div class="player-avatar-placeholder">👤</div>`
+                : `<div class="player-avatar-placeholder" aria-hidden="true">👤</div>`
             }
             <span class="player-name">${player.name}</span>
         `;
         
-        item.addEventListener('click', () => selectImpostor(index));
+        const handleClick = () => selectImpostor(index);
+        item.addEventListener('click', handleClick);
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick();
+            }
+        });
+        
         container.appendChild(item);
     });
 
-    // Reset selection
     gameState.selectedImpostor = null;
-    document.getElementById('confirm-guess').disabled = true;
+    const confirmBtn = document.getElementById('confirm-guess');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.setAttribute('aria-disabled', 'true');
+    }
     
     showPhase('guess');
 }
@@ -765,52 +1052,56 @@ function selectImpostor(playerIndex) {
     gameState.selectedImpostor = playerIndex;
     SoundManager.play('click');
     
-    // Update UI - remove all selected classes, add to clicked item
     const items = document.querySelectorAll('#player-list-guess .player-grid-item');
     items.forEach((item, index) => {
         if (index === playerIndex) {
             item.classList.add('selected');
-            // Add haptic feedback if available
+            item.setAttribute('aria-pressed', 'true');
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
         } else {
             item.classList.remove('selected');
+            item.setAttribute('aria-pressed', 'false');
         }
     });
     
-    // Enable confirm button
-    document.getElementById('confirm-guess').disabled = false;
+    const confirmBtn = document.getElementById('confirm-guess');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.setAttribute('aria-disabled', 'false');
+    }
 }
 
-function confirmGuess() {
+function confirmGuessFn() {
     const isCorrect = gameState.selectedImpostor === gameState.impostorPlayerIndex;
     showResultPhase(isCorrect);
 }
 
-// Result Phase
+// Result Phase - Enhanced with grand celebrations
 function showResultPhase(isCorrect) {
-    const container = document.getElementById('result-content');
-    const impostor = gameState.players[gameState.impostorPlayerIndex];
+    const container = DOM.containers.result;
+    if (!container) return;
+    
     const playerCount = gameState.players.length;
     
-    // Play sound and create confetti for wins
     if (isCorrect) {
         SoundManager.play('win');
-        createConfetti();
+        createGrandConfettiBurst();
+        setTimeout(() => createConfetti(), 500);
+        setTimeout(() => createConfetti(), 1500);
     } else {
         SoundManager.play('lose');
+        createConfetti();
     }
     
-    // Determine layout class based on player count
-    let layoutClass = 'result-few'; // 3-4 players
+    let layoutClass = 'result-few';
     if (playerCount >= 5 && playerCount <= 6) {
         layoutClass = 'result-medium';
     } else if (playerCount >= 7) {
         layoutClass = 'result-many';
     }
     
-    // Build all players grid
     let playersGrid = '';
     gameState.players.forEach((player, index) => {
         const isImpostor = index === gameState.impostorPlayerIndex;
@@ -819,26 +1110,26 @@ function showResultPhase(isCorrect) {
             : 'result-player-other';
         
         playersGrid += `
-            <div class="result-player-card ${playerClass}" data-player-index="${index}">
+            <div class="result-player-card ${playerClass}" data-player-index="${index}" role="article" aria-label="${player.name}${isImpostor ? ' (Impostor)' : ''}">
                 ${player.avatar 
                     ? `<img src="${player.avatar}" class="result-player-avatar" alt="${player.name}">`
-                    : `<div class="result-player-avatar-placeholder">👤</div>`
+                    : `<div class="result-player-avatar-placeholder" aria-hidden="true">👤</div>`
                 }
                 <div class="result-player-name">${player.name}</div>
-                ${isImpostor ? `<div class="result-player-word">${player.word.toUpperCase()}</div>` : ''}
+                ${isImpostor ? `<div class="result-player-word" aria-label="Impostor word: ${player.word}">${player.word.toUpperCase()}</div>` : ''}
             </div>
         `;
     });
     
     container.innerHTML = `
-        <div class="result-header">
-            <h2 class="result-title">${isCorrect ? 'You Found the Impostor!' : 'The Impostor Won!'}</h2>
+        <div class="result-header ${isCorrect ? 'result-win' : 'result-lose'}">
+            <h2 class="result-title ${isCorrect ? 'result-title-win' : 'result-title-lose'}">${isCorrect ? 'You Found the Impostor!' : 'The Impostor Won!'}</h2>
             <p class="result-message">${isCorrect 
                 ? 'Great detective work!' 
                 : 'The impostor fooled everyone!'
             }</p>
         </div>
-        <div class="result-players-grid ${layoutClass}">
+        <div class="result-players-grid ${layoutClass}" role="list">
             ${playersGrid}
         </div>
         <div class="result-words-info">
@@ -854,33 +1145,41 @@ function showResultPhase(isCorrect) {
     `;
 
     showPhase('result');
+    
+    // Staggered card animations
+    setTimeout(() => {
+        const resultCards = container.querySelectorAll('.result-player-card');
+        resultCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.5)';
+                card.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1)';
+                });
+            }, index * 100);
+        });
+    }, 100);
 }
 
 // Restart Functions
-function playAgain() {
-    // OPTION A: Play Again (Same Players)
-    // Preserve: Player names, Avatars
-    // Reset: Words, Impostor, Timer, Votes
-    
+function playAgainFn() {
     gameState.revealedPlayers.clear();
     gameState.selectedImpostor = null;
     gameState.timerStart = null;
     gameState.currentRegistrationIndex = 0;
     stopTimer();
     
-    // Clear player words but keep names/avatars
     gameState.players.forEach(player => {
         player.word = null;
-        // Keep words array for custom mode to reuse
     });
     
     if (gameState.gameMode === 'custom') {
-        // Custom mode: reuse same word dataset
         if (gameState.wordPool.length >= 2) {
             const shuffled = [...gameState.wordPool].sort(() => Math.random() - 0.5);
             gameState.commonWord = shuffled[0];
             gameState.impostorWord = shuffled[1] || shuffled[0];
-            // Go directly to word assignment (skip registration)
             const impostorIndex = Math.floor(Math.random() * gameState.playerCount);
             gameState.impostorPlayerIndex = impostorIndex;
             gameState.players.forEach((player, index) => {
@@ -893,24 +1192,20 @@ function playAgain() {
             gameState.revealedPlayers.clear();
             showWordRevealPhase();
         } else {
-            // Word pool lost, need to re-register
             showRegistrationPhase();
         }
     } else {
-        // Auto mode: regenerate words
         generateAutoWords();
     }
 }
 
-function changeWords() {
-    // Reset to registration/auto generation
+function changeWordsFn() {
     gameState.wordPool = [];
     gameState.revealedPlayers.clear();
     gameState.selectedImpostor = null;
     gameState.currentRegistrationIndex = 0;
     stopTimer();
     
-    // Clear player words
     gameState.players.forEach(player => {
         player.word = null;
         if (player.words) {
@@ -919,7 +1214,7 @@ function changeWords() {
     });
     
     if (gameState.gameMode === 'custom') {
-        gameState.players = []; // Reset players to start fresh registration
+        gameState.players = [];
         showRegistrationPhase();
     } else {
         generateAutoWords();
@@ -927,9 +1222,6 @@ function changeWords() {
 }
 
 function changeSettings() {
-    // OPTION B: New Game (New Players)
-    // Full reset - redirect to Initial Setup Screen
-    
     gameState.playerCount = 4;
     gameState.gameMode = null;
     gameState.wordPool = [];
@@ -942,18 +1234,45 @@ function changeSettings() {
     gameState.impostorPlayerIndex = null;
     stopTimer();
     
-    // Reset UI
-    document.getElementById('player-count').value = 4;
-    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    if (DOM.inputs.playerCount) {
+        DOM.inputs.playerCount.value = 4;
+    }
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
     
     showPhase('setup');
 }
 
-function exitGame() {
-    // Use modal with callback
+function exitGameFn() {
     showModal('Exit Game', 'Are you sure you want to exit? This will start a new game.');
-    // Store callback on modal element
-    const modal = document.getElementById('game-modal');
-    modal.dataset.onConfirm = 'exit';
+    const modal = DOM.modals.game;
+    if (modal) {
+        modal.dataset.onConfirm = 'exit';
+    }
 }
 
+/* ============================================
+   Viewport + Safe-Area Helpers (Mobile optimization)
+   ============================================ */
+function setupViewportFixes() {
+    const setHeights = () => {
+        const viewport = window.visualViewport;
+        const height = viewport ? viewport.height : window.innerHeight;
+        const bottomInset = viewport
+            ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+            : 0;
+
+        document.documentElement.style.setProperty('--app-height', `${height}px`);
+        document.documentElement.style.setProperty('--safe-bottom-js', `${bottomInset}px`);
+    };
+
+    setHeights();
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setHeights);
+    }
+    window.addEventListener('orientationchange', setHeights);
+    window.addEventListener('resize', setHeights);
+}
