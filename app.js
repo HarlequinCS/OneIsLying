@@ -205,6 +205,7 @@ const gameState = {
     impostorWord: null,
     players: [],
     currentRegistrationIndex: 0,
+    registrationStep: 'name', // 'name' or 'words' - tracks which step of registration we're on
     revealedPlayers: new Set(),
     timerStart: null,
     timerInterval: null,
@@ -281,6 +282,25 @@ function hideModal() {
     }
 }
 
+// Initialize phase accessibility immediately (before DOMContentLoaded)
+// This prevents any focus attempts from happening before aria-hidden is set correctly
+(function initPhaseAccessibility() {
+    const setupPhase = document.getElementById('setup-phase');
+    if (setupPhase) {
+        setupPhase.setAttribute('aria-hidden', 'false');
+        setupPhase.removeAttribute('inert');
+    }
+    
+    // Hide all other phases that have aria-hidden="true" in HTML
+    const otherPhases = document.querySelectorAll('.phase:not(#setup-phase)');
+    otherPhases.forEach(phase => {
+        if (!phase.classList.contains('active')) {
+            phase.setAttribute('aria-hidden', 'true');
+            phase.setAttribute('inert', '');
+        }
+    });
+})();
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     DOM.init();
@@ -288,6 +308,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setupViewportFixes();
     initializeEventListeners();
     initializeSoundToggle();
+    
+    // Re-initialize phase accessibility states after DOM.init() caches elements
+    const setupPhase = DOM.phases.setup;
+    if (setupPhase && setupPhase.classList.contains('active')) {
+        setupPhase.setAttribute('aria-hidden', 'false');
+        setupPhase.removeAttribute('inert');
+    }
+    
+    // Ensure all other phases are properly hidden
+    Object.entries(DOM.phases).forEach(([name, phase]) => {
+        if (phase && name !== 'setup' && !phase.classList.contains('active')) {
+            phase.setAttribute('aria-hidden', 'true');
+            phase.setAttribute('inert', '');
+        }
+    });
     
     // Modal confirm button
     const modalConfirm = document.getElementById('modal-confirm');
@@ -426,19 +461,25 @@ function initializeEventListeners() {
 
 // Phase Management
 function showPhase(phaseName) {
-    Object.values(DOM.phases).forEach(phase => {
-        if (phase) {
-            phase.classList.remove('active');
-            phase.setAttribute('aria-hidden', 'true');
-        }
-    });
-    
+    // First, activate the target phase and set aria-hidden to false BEFORE deactivating others
+    // This ensures focus can be set on elements in the active phase without accessibility warnings
     const phase = DOM.phases[phaseName];
     if (phase) {
-        phase.classList.add('active');
+        // Remove inert and set aria-hidden to false FIRST, before any other operations
+        phase.removeAttribute('inert');
         phase.setAttribute('aria-hidden', 'false');
+        phase.classList.add('active');
         phase.scrollTop = 0;
     }
+    
+    // Then deactivate all other phases
+    Object.values(DOM.phases).forEach(p => {
+        if (p && p !== phase) {
+            p.classList.remove('active');
+            p.setAttribute('aria-hidden', 'true');
+            p.setAttribute('inert', '');
+        }
+    });
 }
 
 // Game Setup
@@ -507,6 +548,7 @@ function showRegistrationPhase() {
     }
     
     gameState.currentRegistrationIndex = 0;
+    gameState.registrationStep = 'name'; // Start with name/photo step
     showCurrentPlayerRegistration();
 }
 
@@ -516,95 +558,73 @@ function showCurrentPlayerRegistration() {
     const submitBtn = document.getElementById('complete-registration');
     const currentIndex = gameState.currentRegistrationIndex;
     const isCustomMode = gameState.gameMode === 'custom';
-    const isLastPlayer = currentIndex === gameState.playerCount - 1;
+    const currentStep = gameState.registrationStep;
     const playerCount = gameState.playerCount;
-    const progressPercent = ((currentIndex + 1) / playerCount) * 100;
+    
+    // Calculate progress: in custom mode, each player has 2 steps (name + words)
+    let totalSteps = isCustomMode ? playerCount * 2 : playerCount;
+    let currentStepNumber = isCustomMode 
+        ? (currentIndex * 2 + (currentStep === 'name' ? 1 : 2))
+        : (currentIndex + 1);
+    const progressPercent = (currentStepNumber / totalSteps) * 100;
     
     const progressText = document.getElementById('progress-text');
     const progressFill = document.getElementById('progress-fill');
     
     if (progressText) {
-        progressText.textContent = `Player ${currentIndex + 1} of ${playerCount}`;
+        if (isCustomMode) {
+            progressText.textContent = currentStep === 'name' 
+                ? `Player ${currentIndex + 1} of ${playerCount} - Name & Photo`
+                : `Player ${currentIndex + 1} of ${playerCount} - Words`;
+        } else {
+            progressText.textContent = `Player ${currentIndex + 1} of ${playerCount}`;
+        }
     }
     
     if (progressFill) {
         progressFill.style.width = `${progressPercent}%`;
     }
     
-    if (instruction) {
-        const playerNum = currentIndex + 1;
-        instruction.textContent = isCustomMode 
-            ? `Player ${playerNum}: Enter your name and 2 words` 
-            : `Player ${playerNum}: Enter your name`;
-    }
-    
-    if (submitBtn) {
-        submitBtn.textContent = isLastPlayer ? 'Complete Registration' : 'Next Player';
-        submitBtn.disabled = true;
-        submitBtn.setAttribute('aria-label', isLastPlayer ? 'Complete registration for all players' : 'Continue to next player');
-    }
-    
     if (!container) return;
     
     container.innerHTML = '';
-    
     const player = gameState.players[currentIndex];
     
-    if (isCustomMode && !player.words) {
-        player.words = ['', ''];
-    }
-    
-    const wordInputsHTML = isCustomMode ? `
-        <div class="word-input-group">
-            <label for="word-input-0">Word 1</label>
-            <input type="text" class="player-word-input" id="word-input-0" placeholder="Enter word 1" data-word="0" value="${(player.words && player.words[0]) || ''}" aria-label="Enter first word">
-        </div>
-        <div class="word-input-group">
-            <label for="word-input-1">Word 2</label>
-            <input type="text" class="player-word-input" id="word-input-1" placeholder="Enter word 2" data-word="1" value="${(player.words && player.words[1]) || ''}" aria-label="Enter second word">
-        </div>
-    ` : '';
-    
-    const item = document.createElement('div');
-    item.className = 'player-registration-item';
-    item.innerHTML = `
-        <h3>Player ${currentIndex + 1}</h3>
-        <div class="avatar-container">
-            <img class="avatar-preview" id="avatar-preview-current" style="display: ${player.avatar ? 'block' : 'none'};" alt="Player ${currentIndex + 1} avatar">
-            <div class="avatar-placeholder" id="avatar-placeholder-current" style="display: ${player.avatar ? 'none' : 'flex'};" aria-label="Avatar placeholder">👤</div>
-        </div>
-        <button class="camera-btn" id="camera-btn-current" aria-label="Take photo for player ${currentIndex + 1}">📷 Take Photo</button>
-        <input type="text" class="player-name-input" id="player-name-current" placeholder="Enter name" value="${player.name || ''}" aria-label="Enter player name" autocomplete="name">
-        ${wordInputsHTML}
-    `;
-    container.appendChild(item);
-    
-    if (player.avatar) {
-        const preview = document.getElementById('avatar-preview-current');
-        if (preview) preview.src = player.avatar;
-    }
-    
-    const cameraBtn = document.getElementById('camera-btn-current');
-    if (cameraBtn) {
-        cameraBtn.addEventListener('click', () => {
-            SoundManager.play('click');
-            openCamera(currentIndex);
-        });
-    }
-    
-    const nameInput = document.getElementById('player-name-current');
-    if (nameInput) {
-        nameInput.addEventListener('input', (e) => {
-            player.name = e.target.value.trim();
-            validateCurrentPlayerRegistration();
-        });
-    }
-    
-    if (isCustomMode) {
+    // Show different content based on step
+    if (isCustomMode && currentStep === 'words') {
+        // Step 2: Words input
         if (!player.words) {
             player.words = ['', ''];
         }
         
+        if (instruction) {
+            instruction.textContent = `Player ${currentIndex + 1}: Enter your 2 words`;
+        }
+        
+        if (submitBtn) {
+            const isLastPlayer = currentIndex === gameState.playerCount - 1;
+            submitBtn.textContent = isLastPlayer ? 'Complete Registration' : 'Next Player';
+            submitBtn.disabled = true;
+            submitBtn.setAttribute('aria-label', isLastPlayer ? 'Complete registration for all players' : 'Continue to next player');
+        }
+        
+        const item = document.createElement('div');
+        item.className = 'player-registration-item';
+        item.innerHTML = `
+            <h3>Player ${currentIndex + 1} - Enter Words</h3>
+            <p class="instruction" style="margin-bottom: 20px;">Enter 2 different words</p>
+            <div class="word-input-group">
+                <label for="word-input-0">Word 1</label>
+                <input type="text" class="player-word-input" id="word-input-0" placeholder="Enter word 1" data-word="0" value="${player.words[0] || ''}" aria-label="Enter first word" autofocus>
+            </div>
+            <div class="word-input-group">
+                <label for="word-input-1">Word 2</label>
+                <input type="text" class="player-word-input" id="word-input-1" placeholder="Enter word 2" data-word="1" value="${player.words[1] || ''}" aria-label="Enter second word">
+            </div>
+        `;
+        container.appendChild(item);
+        
+        // Add event listeners for word inputs
         container.querySelectorAll('.player-word-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const wordIndex = parseInt(e.target.dataset.word);
@@ -613,6 +633,55 @@ function showCurrentPlayerRegistration() {
                 validateCurrentPlayerRegistration();
             });
         });
+        
+    } else {
+        // Step 1: Name and Photo (or only name for auto mode)
+        if (instruction) {
+            const playerNum = currentIndex + 1;
+            instruction.textContent = isCustomMode 
+                ? `Player ${playerNum}: Enter your name and photo` 
+                : `Player ${playerNum}: Enter your name`;
+        }
+        
+        if (submitBtn) {
+            submitBtn.textContent = 'Next';
+            submitBtn.disabled = true;
+            submitBtn.setAttribute('aria-label', 'Continue to next step');
+        }
+        
+        const item = document.createElement('div');
+        item.className = 'player-registration-item';
+        item.innerHTML = `
+            <h3>Player ${currentIndex + 1}</h3>
+            <div class="avatar-container">
+                <img class="avatar-preview" id="avatar-preview-current" style="display: ${player.avatar ? 'block' : 'none'};" alt="Player ${currentIndex + 1} avatar">
+                <div class="avatar-placeholder" id="avatar-placeholder-current" style="display: ${player.avatar ? 'none' : 'flex'};" aria-label="Avatar placeholder">👤</div>
+            </div>
+            <button class="camera-btn" id="camera-btn-current" aria-label="Take photo for player ${currentIndex + 1}">📷 Take Photo</button>
+            <input type="text" class="player-name-input" id="player-name-current" placeholder="Enter name" value="${player.name || ''}" aria-label="Enter player name" autocomplete="name" autofocus>
+        `;
+        container.appendChild(item);
+        
+        if (player.avatar) {
+            const preview = document.getElementById('avatar-preview-current');
+            if (preview) preview.src = player.avatar;
+        }
+        
+        const cameraBtn = document.getElementById('camera-btn-current');
+        if (cameraBtn) {
+            cameraBtn.addEventListener('click', () => {
+                SoundManager.play('click');
+                openCamera(currentIndex);
+            });
+        }
+        
+        const nameInput = document.getElementById('player-name-current');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+                player.name = e.target.value.trim();
+                validateCurrentPlayerRegistration();
+            });
+        }
     }
     
     showPhase('registration');
@@ -622,14 +691,20 @@ function validateCurrentPlayerRegistration() {
     const submitBtn = document.getElementById('complete-registration');
     const currentIndex = gameState.currentRegistrationIndex;
     const player = gameState.players[currentIndex];
+    const currentStep = gameState.registrationStep;
+    const isCustomMode = gameState.gameMode === 'custom';
     
-    const hasName = player.name.trim() !== '';
-    let isValid = hasName;
+    let isValid = false;
     
-    if (gameState.gameMode === 'custom') {
+    if (isCustomMode && currentStep === 'words') {
+        // Validate words: need 2 non-empty, different words
         const hasWords = player.words && player.words.length === 2 && 
                         player.words[0] !== '' && player.words[1] !== '';
-        isValid = hasName && hasWords;
+        const wordsDifferent = hasWords && player.words[0] !== player.words[1];
+        isValid = hasWords && wordsDifferent;
+    } else {
+        // Validate name: just need a name
+        isValid = player.name.trim() !== '';
     }
     
     if (submitBtn) {
@@ -641,26 +716,52 @@ function validateCurrentPlayerRegistration() {
 function handleRegistrationSubmit() {
     const currentIndex = gameState.currentRegistrationIndex;
     const player = gameState.players[currentIndex];
-    const hasName = player.name.trim() !== '';
+    const currentStep = gameState.registrationStep;
+    const isCustomMode = gameState.gameMode === 'custom';
     
-    if (!hasName) {
-        showModal('Missing Name', 'Please enter a name for this player.');
-        return;
-    }
-    
-    if (gameState.gameMode === 'custom') {
+    if (isCustomMode && currentStep === 'words') {
+        // Step 2: Validate words
         if (!player.words || player.words.length !== 2 || 
             player.words[0] === '' || player.words[1] === '') {
             showModal('Missing Words', 'Please enter both words for this player.');
             return;
         }
-    }
-    
-    if (currentIndex < gameState.playerCount - 1) {
-        gameState.currentRegistrationIndex++;
-        showCurrentPlayerRegistration();
+        
+        if (player.words[0] === player.words[1]) {
+            showModal('Duplicate Words', 'Please enter two different words.');
+            return;
+        }
+        
+        // Move to next player or complete registration
+        if (currentIndex < gameState.playerCount - 1) {
+            gameState.currentRegistrationIndex++;
+            gameState.registrationStep = 'name'; // Start next player with name step
+            showCurrentPlayerRegistration();
+        } else {
+            completeRegistration();
+        }
     } else {
-        completeRegistration();
+        // Step 1: Validate name
+        const hasName = player.name.trim() !== '';
+        
+        if (!hasName) {
+            showModal('Missing Name', 'Please enter a name for this player.');
+            return;
+        }
+        
+        if (isCustomMode) {
+            // Move to words step for same player
+            gameState.registrationStep = 'words';
+            showCurrentPlayerRegistration();
+        } else {
+            // Auto mode: move to next player or complete
+            if (currentIndex < gameState.playerCount - 1) {
+                gameState.currentRegistrationIndex++;
+                showCurrentPlayerRegistration();
+            } else {
+                completeRegistration();
+            }
+        }
     }
 }
 
@@ -1169,6 +1270,7 @@ function playAgainFn() {
     gameState.selectedImpostor = null;
     gameState.timerStart = null;
     gameState.currentRegistrationIndex = 0;
+    gameState.registrationStep = 'name';
     stopTimer();
     
     gameState.players.forEach(player => {
@@ -1204,6 +1306,7 @@ function changeWordsFn() {
     gameState.revealedPlayers.clear();
     gameState.selectedImpostor = null;
     gameState.currentRegistrationIndex = 0;
+    gameState.registrationStep = 'name';
     stopTimer();
     
     gameState.players.forEach(player => {
@@ -1229,6 +1332,7 @@ function changeSettings() {
     gameState.impostorWord = null;
     gameState.players = [];
     gameState.currentRegistrationIndex = 0;
+    gameState.registrationStep = 'name';
     gameState.revealedPlayers.clear();
     gameState.selectedImpostor = null;
     gameState.impostorPlayerIndex = null;

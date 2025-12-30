@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#B8A9E8">
     <meta name="description" content="One Is Lying - A mobile party game where players must identify the impostor based on word descriptions. Perfect for friends sharing one device!">
     <!-- Version 1.0.0 - 2025-12-30: Production Release -->
     <title>One Is Lying - Party Game</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="styles.css?v=1.0.0"><!-- Cache bust CSS -->
+    <link rel="stylesheet" href="styles.css?v=1.0.1"><!-- Cache bust CSS -->
 </head>
 <body>
     <!-- Sound Toggle -->
@@ -18,7 +18,7 @@
     </button>
 
     <!-- Game Setup Phase -->
-    <div id="setup-phase" class="phase active">
+    <div id="setup-phase" class="phase active" aria-hidden="false">
         <div class="container">
             <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo">
             <h1 class="game-title">One Is Lying</h1>
@@ -151,7 +151,18 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.0.0"></script><!-- Cache bust JS -->
+    <!-- Immediate accessibility fix - ensures setup phase is accessible before any focus attempts -->
+    <script>
+        // This runs immediately when the script tag is parsed, before app.js loads
+        (function() {
+            const setupPhase = document.getElementById('setup-phase');
+            if (setupPhase) {
+                setupPhase.setAttribute('aria-hidden', 'false');
+                setupPhase.removeAttribute('inert');
+            }
+        })();
+    </script>
+    <script src="app.js?v=1.0.2"></script><!-- Cache bust JS -->
 </body>
 </html>
 
