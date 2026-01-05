@@ -1,17 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Primary Meta Tags -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>One Is Lying - Social Deduction Party Game | Free Online Game</title>
+    <meta name="title" content="One Is Lying - Social Deduction Party Game | Free Online Game">
+    <meta name="description" content="Play One Is Lying - a free mobile party game where 3-10 players must identify the impostor based on word descriptions. Perfect for friends sharing one device! No download required.">
+    <meta name="keywords" content="party game, social deduction game, impostor game, word game, mobile game, free game, multiplayer game, group game, friends game, one is lying">
+    <meta name="author" content="One Is Lying">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="language" content="English">
+    <meta name="rating" content="general">
+    
+    <!-- Canonical URL - GitHub Pages -->
+    <link rel="canonical" href="https://harlequincs.github.io/OneIsLying/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://harlequincs.github.io/OneIsLying/">
+    <meta property="og:title" content="One Is Lying - Social Deduction Party Game">
+    <meta property="og:description" content="Play One Is Lying - a free mobile party game where players must identify the impostor. Perfect for friends sharing one device!">
+    <meta property="og:image" content="https://harlequincs.github.io/OneIsLying/images/gamelogo.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="One Is Lying - Social Deduction Party Game">
+    <meta property="og:site_name" content="One Is Lying">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://harlequincs.github.io/OneIsLying/">
+    <meta name="twitter:title" content="One Is Lying - Social Deduction Party Game">
+    <meta name="twitter:description" content="Play One Is Lying - a free mobile party game where players must identify the impostor. Perfect for friends sharing one device!">
+    <meta name="twitter:image" content="https://harlequincs.github.io/OneIsLying/images/gamelogo.svg">
+    <meta name="twitter:image:alt" content="One Is Lying - Social Deduction Party Game">
+    
+    <!-- Mobile Web App -->
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="One Is Lying">
     <meta name="theme-color" content="#B8A9E8">
-    <meta name="description" content="One Is Lying - A mobile party game where players must identify the impostor based on word descriptions. Perfect for friends sharing one device!">
-    <!-- Version 1.0.0 - 2025-12-30: Production Release -->
-    <title>One Is Lying - Party Game</title>
+    <meta name="msapplication-TileColor" content="#B8A9E8">
+    
+    <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="styles.css?v=2.2.0"><!-- Cache bust CSS -->
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="manifest" href="images/site.webmanifest">
+    
+    <!-- Stylesheet with Cache Busting -->
+    <link rel="stylesheet" href="styles.css?v=2.3.0" media="all">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "One Is Lying",
+      "description": "A free mobile party game where 3-10 players must identify the impostor based on word descriptions. Perfect for friends sharing one device!",
+      "url": "https://harlequincs.github.io/OneIsLying/",
+      "applicationCategory": "Game",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "3-10 players",
+        "No download required",
+        "Mobile-first design",
+        "Camera integration for avatars",
+        "Two game modes",
+        "Free to play"
+      ],
+      "screenshot": "https://harlequincs.github.io/OneIsLying/images/gamelogo.svg",
+      "softwareVersion": "2.3.0"
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Game",
+      "name": "One Is Lying",
+      "description": "Social deduction party game where players identify the impostor",
+      "gameLocation": "Web Browser",
+      "numberOfPlayers": {
+        "@type": "QuantitativeValue",
+        "minValue": 3,
+        "maxValue": 10
+      },
+      "gameItem": [
+        {
+          "@type": "Thing",
+          "name": "Custom Word Mode"
+        },
+        {
+          "@type": "Thing",
+          "name": "Auto Generated Mode"
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
+    <header role="banner" style="display: none;" aria-hidden="true">
+        <h1>One Is Lying - Social Deduction Party Game</h1>
+    </header>
+    
+    <main role="main">
     <!-- Sound Toggle -->
     <button class="sound-toggle" id="sound-toggle" title="Toggle Sound" aria-label="Toggle sound" aria-pressed="true">
         🔊
@@ -20,7 +122,7 @@
     <!-- Game Setup Phase -->
     <div id="setup-phase" class="phase active" aria-hidden="false">
         <div class="container">
-            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo">
+            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo" loading="eager" width="140" height="140">
             <h1 class="game-title">One Is Lying</h1>
             <div class="setup-section">
                 <label class="input-label">Number of Players</label>
@@ -44,7 +146,7 @@
     <!-- Player Registration Phase -->
     <div id="registration-phase" class="phase" role="main" aria-label="Player registration" aria-hidden="true">
         <div class="container">
-            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo registration-logo">
+            <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo registration-logo" loading="lazy" width="140" height="140">
             <h2>Player Registration</h2>
             <div class="registration-progress">
                 <span id="progress-text">Player 1 of 4</span>
@@ -86,7 +188,7 @@
     <div id="discussion-phase" class="phase discussion-fullscreen" role="main" aria-label="Discussion phase" aria-hidden="true">
         <div class="container discussion-container">
             <div class="discussion-content">
-                <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo discussion-logo">
+                <img src="images/gamelogo.svg" alt="One Is Lying" class="game-logo discussion-logo" loading="lazy" width="140" height="140">
                 <h2>Discussion Time</h2>
                 <div class="timer-display">
                     <span id="timer">00:00</span>
@@ -155,7 +257,31 @@
             }
         })();
     </script>
-    <script src="app.js?v=2.2.0"></script><!-- Cache bust JS -->
+    </main>
+    
+    <footer role="contentinfo" style="display: none;" aria-hidden="true">
+        <p>One Is Lying - Free Social Deduction Party Game</p>
+    </footer>
+    
+    <!-- Main Application Script with Cache Busting -->
+    <script src="app.js?v=2.3.0" defer></script>
+    
+    <!-- Production Error Handler -->
+    <script>
+        // Global error handler for production
+        window.addEventListener('error', function(e) {
+            if (window.DEBUG) {
+                console.error('Global error:', e.error);
+            }
+        });
+        
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(e) {
+            if (window.DEBUG) {
+                console.error('Unhandled promise rejection:', e.reason);
+            }
+        });
+    </script>
 </body>
 </html>
 

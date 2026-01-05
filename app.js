@@ -1,6 +1,7 @@
-/* Version 2.0.0 - 2025-12-30
-   Game UI Redesign - Pixel-Art Party Game Style
+/* Version 2.3.0 - 2025-12-30
+   GitHub Pages Production Release - SEO Optimized
    Changelog:
+   - v2.3.0: GitHub Pages optimization, complete SEO, semantic HTML, 404 handling
    - v2.0.0: Complete game-like UI redesign with pixel-art styling, no-scroll layout, enhanced animations
    - v1.0.2: Two-step registration process (name/photo → words)
    - v1.0.1: Accessibility fixes (aria-hidden, inert attributes)
@@ -72,8 +73,8 @@ function getPlayerAvatarHTML(player, index) {
     }
 }
 
-// Application version
-const APP_VERSION = '2.0.0';
+// Application version (update for cache busting)
+const APP_VERSION = '2.3.0';
 
 // Sound System with lazy loading
 const SoundManager = {

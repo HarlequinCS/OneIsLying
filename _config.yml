@@ -1,0 +1,40 @@
+# GitHub Pages Jekyll Configuration
+# This file enables GitHub Pages to serve the site correctly
+
+# Site settings
+title: "One Is Lying"
+description: "A free mobile party game where players must identify the impostor"
+url: "https://harlequincs.github.io"
+baseurl: "/OneIsLying"
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - LICENSE
+  - .gitignore
+  - documentation/
+  - deploy.sh
+  - _config.yml
+
+# Include files
+include:
+  - .htaccess
+  - robots.txt
+  - sitemap.xml
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+
+# Permalinks
+permalink: pretty
+
+# Pagination (disabled for single-page app)
+paginate: false
+

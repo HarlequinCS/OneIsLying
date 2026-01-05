@@ -1,0 +1,26 @@
+# robots.txt for One Is Lying - GitHub Pages
+# https://harlequincs.github.io/OneIsLying/
+
+User-agent: *
+Allow: /
+Disallow: /documentation/
+
+# Sitemap location
+Sitemap: https://harlequincs.github.io/OneIsLying/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Specific bot rules
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
