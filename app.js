@@ -1,10 +1,10 @@
-/* Version 1.0.0 - 2025-12-30
-   Production Release
+/* Version 2.0.0 - 2025-12-30
+   Game UI Redesign - Pixel-Art Party Game Style
    Changelog:
+   - v2.0.0: Complete game-like UI redesign with pixel-art styling, no-scroll layout, enhanced animations
+   - v1.0.2: Two-step registration process (name/photo → words)
+   - v1.0.1: Accessibility fixes (aria-hidden, inert attributes)
    - v1.0.0: Production release - optimized performance, accessibility, error handling, and mobile camera support
-   - v5.0: Enhanced iPhone/iOS camera support with proper constraints, grand celebratory Result phase
-   - v4.0: Viewport fixes and safe-area helpers for mobile
-   - v3.0: Initial mobile responsive fixes
 */
 
 // Production error handler (silent for user-facing errors)
@@ -17,8 +17,63 @@ const handleError = (error, context = '') => {
     }
 };
 
+// SVG Pixel Character Generator
+// Creates pixel-art style SVG characters for players without photos
+function generatePixelCharacter(playerIndex, size = 100) {
+    // Color palette for characters (bright pastels)
+    const colors = [
+        { body: '#B8A9E8', face: '#FFD4B3', hair: '#8B5CF6' },
+        { body: '#A8D5E2', face: '#FFE5A0', hair: '#EC4899' },
+        { body: '#B5E5CF', face: '#FFB3BA', hair: '#10B981' },
+        { body: '#FFD4B3', face: '#E8D5FF', hair: '#F59E0B' },
+        { body: '#FFE5A0', face: '#B8A9E8', hair: '#EF4444' },
+        { body: '#FFB3BA', face: '#A8D5E2', hair: '#8B5CF6' },
+        { body: '#E8D5FF', face: '#B5E5CF', hair: '#EC4899' },
+        { body: '#B8A9E8', face: '#FFD4B3', hair: '#10B981' },
+        { body: '#A8D5E2', face: '#FFE5A0', hair: '#F59E0B' },
+        { body: '#B5E5CF', face: '#FFB3BA', hair: '#8B5CF6' }
+    ];
+    
+    const colorSet = colors[playerIndex % colors.length];
+    const pixelSize = size / 10; // 10x10 pixel grid
+    
+    // Simple pixel character: body, head, eyes
+    const svg = `
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">
+            <!-- Body (rounded rectangle) -->
+            <rect x="${pixelSize * 2}" y="${pixelSize * 5}" width="${pixelSize * 6}" height="${pixelSize * 4}" 
+                  rx="${pixelSize * 0.5}" fill="${colorSet.body}"/>
+            <!-- Head (circle) -->
+            <circle cx="${size / 2}" cy="${pixelSize * 3.5}" r="${pixelSize * 2.5}" fill="${colorSet.face}"/>
+            <!-- Hair (top arc) -->
+            <path d="M ${pixelSize * 2} ${pixelSize * 2} Q ${size / 2} ${pixelSize * 1} ${pixelSize * 8} ${pixelSize * 2} L ${pixelSize * 7.5} ${pixelSize * 2.5} Q ${size / 2} ${pixelSize * 2} ${pixelSize * 2.5} ${pixelSize * 2.5} Z" 
+                  fill="${colorSet.hair}"/>
+            <!-- Eyes -->
+            <circle cx="${pixelSize * 3.5}" cy="${pixelSize * 3}" r="${pixelSize * 0.8}" fill="#2D3748"/>
+            <circle cx="${pixelSize * 6.5}" cy="${pixelSize * 3}" r="${pixelSize * 0.8}" fill="#2D3748"/>
+            <!-- Smile -->
+            <path d="M ${pixelSize * 3.5} ${pixelSize * 4} Q ${size / 2} ${pixelSize * 4.5} ${pixelSize * 6.5} ${pixelSize * 4}" 
+                  stroke="#2D3748" stroke-width="${pixelSize * 0.3}" fill="none" stroke-linecap="round"/>
+        </svg>
+    `.trim();
+    
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+// Helper function to get player avatar HTML
+function getPlayerAvatarHTML(player, index) {
+    if (player.avatar) {
+        // Use photo if available
+        return `<img src="${player.avatar}" class="player-avatar" alt="${player.name}">`;
+    } else {
+        // Use generated pixel character
+        const svgData = generatePixelCharacter(index);
+        return `<img src="${svgData}" class="player-avatar" alt="${player.name}">`;
+    }
+}
+
 // Application version
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '2.0.0';
 
 // Sound System with lazy loading
 const SoundManager = {
@@ -440,16 +495,27 @@ function initializeEventListeners() {
         });
     }
     
-    // Result phase
-    const playAgain = document.getElementById('play-again');
-    const changeWords = document.getElementById('change-words');
-    const changeSettings = document.getElementById('change-settings');
-    const exitGame = document.getElementById('exit-game');
-    
-    if (playAgain) playAgain.addEventListener('click', () => { SoundManager.play('click'); playAgainFn(); });
-    if (changeWords) changeWords.addEventListener('click', () => { SoundManager.play('click'); changeWordsFn(); });
-    if (changeSettings) changeSettings.addEventListener('click', () => { SoundManager.play('click'); changeSettings(); });
-    if (exitGame) exitGame.addEventListener('click', () => { SoundManager.play('click'); exitGameFn(); });
+    // Result phase - Use event delegation for dynamically created buttons
+    const resultContainer = DOM.containers.result;
+    if (resultContainer) {
+        resultContainer.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            
+            const id = target.id;
+            SoundManager.play('click');
+            
+            if (id === 'play-again') {
+                playAgainFn();
+            } else if (id === 'change-words') {
+                changeWordsFn();
+            } else if (id === 'change-settings') {
+                changeSettings();
+            } else if (id === 'exit-game') {
+                exitGameFn();
+            }
+        });
+    }
     
     // Camera
     const cancelCamera = document.getElementById('cancel-camera');
@@ -980,10 +1046,7 @@ function showWordRevealPhase() {
         }
         
         item.innerHTML = `
-            ${player.avatar 
-                ? `<img src="${player.avatar}" class="player-avatar" alt="${player.name}">`
-                : `<div class="player-avatar-placeholder" aria-hidden="true">👤</div>`
-            }
+            ${getPlayerAvatarHTML(player, index)}
             <span class="player-name">${player.name}</span>
         `;
         
@@ -1120,10 +1183,7 @@ function showGuessPhase() {
         item.setAttribute('aria-label', `Select ${player.name} as impostor`);
         
         item.innerHTML = `
-            ${player.avatar 
-                ? `<img src="${player.avatar}" class="player-avatar" alt="${player.name}">`
-                : `<div class="player-avatar-placeholder" aria-hidden="true">👤</div>`
-            }
+            ${getPlayerAvatarHTML(player, index)}
             <span class="player-name">${player.name}</span>
         `;
         
@@ -1179,89 +1239,286 @@ function confirmGuessFn() {
     showResultPhase(isCorrect);
 }
 
-// Result Phase - Enhanced with grand celebrations
+// Result Phase - Role-Based Victory Screen
 function showResultPhase(isCorrect) {
     const container = DOM.containers.result;
     if (!container) return;
     
+    const impostorIndex = gameState.impostorPlayerIndex;
     const playerCount = gameState.players.length;
     
-    if (isCorrect) {
+    // Victory Logic:
+    // isCorrect === true  → Civilians Win (multiple winners)
+    // isCorrect === false → Impostor Wins (single winner)
+    
+    const isCivilianVictory = isCorrect;
+    const isImpostorVictory = !isCorrect;
+    
+    // Sound and effects
+    if (isCivilianVictory) {
         SoundManager.play('win');
         createGrandConfettiBurst();
         setTimeout(() => createConfetti(), 500);
         setTimeout(() => createConfetti(), 1500);
+        setTimeout(() => createConfetti(), 2500);
     } else {
         SoundManager.play('lose');
-        createConfetti();
+        // Dark, ominous effects for impostor victory
     }
     
-    let layoutClass = 'result-few';
-    if (playerCount >= 5 && playerCount <= 6) {
-        layoutClass = 'result-medium';
-    } else if (playerCount >= 7) {
-        layoutClass = 'result-many';
-    }
+    // Separate winners from losers
+    const winners = [];
+    const losers = [];
     
-    let playersGrid = '';
     gameState.players.forEach((player, index) => {
-        const isImpostor = index === gameState.impostorPlayerIndex;
-        const playerClass = isImpostor 
-            ? (isCorrect ? 'result-player-loser' : 'result-player-winner')
-            : 'result-player-other';
+        const isImpostor = index === impostorIndex;
+        const isWinner = isCivilianVictory ? !isImpostor : isImpostor;
         
-        playersGrid += `
-            <div class="result-player-card ${playerClass}" data-player-index="${index}" role="article" aria-label="${player.name}${isImpostor ? ' (Impostor)' : ''}">
-                ${player.avatar 
-                    ? `<img src="${player.avatar}" class="result-player-avatar" alt="${player.name}">`
-                    : `<div class="result-player-avatar-placeholder" aria-hidden="true">👤</div>`
-                }
-                <div class="result-player-name">${player.name}</div>
-                ${isImpostor ? `<div class="result-player-word" aria-label="Impostor word: ${player.word}">${player.word.toUpperCase()}</div>` : ''}
-            </div>
-        `;
+        if (isWinner) {
+            winners.push({ player, index, isImpostor });
+        } else {
+            losers.push({ player, index, isImpostor });
+        }
     });
     
-    container.innerHTML = `
-        <div class="result-header ${isCorrect ? 'result-win' : 'result-lose'}">
-            <h2 class="result-title ${isCorrect ? 'result-title-win' : 'result-title-lose'}">${isCorrect ? 'You Found the Impostor!' : 'The Impostor Won!'}</h2>
-            <p class="result-message">${isCorrect 
-                ? 'Great detective work!' 
-                : 'The impostor fooled everyone!'
-            }</p>
-        </div>
-        <div class="result-players-grid ${layoutClass}" role="list">
-            ${playersGrid}
-        </div>
-        <div class="result-words-info">
-            <div class="result-word-item">
-                <span class="result-word-label">Common Word:</span>
-                <span class="result-word-value">${gameState.commonWord.toUpperCase()}</span>
+    // Generate player card HTML
+    function generatePlayerCard(playerData, isWinnerCard) {
+        const { player, index, isImpostor } = playerData;
+        
+        let avatarHTML;
+        if (player.avatar) {
+            avatarHTML = `<img src="${player.avatar}" class="victory-player-avatar" alt="${player.name}">`;
+        } else {
+            const svgData = generatePixelCharacter(index);
+            avatarHTML = `<img src="${svgData}" class="victory-player-avatar" alt="${player.name}">`;
+        }
+        
+        const reactionEmoji = isWinnerCard 
+            ? (isImpostor ? '😎' : '🎉')
+            : (isImpostor ? '😵' : '😮');
+        
+        return `
+            <div class="victory-player-card ${isWinnerCard ? 'victory-winner' : 'victory-loser'}" 
+                 data-player-index="${index}"
+                 role="article"
+                 aria-label="${player.name}${isImpostor ? ' (Impostor)' : ' (Civilian)'}">
+                <div class="victory-player-avatar-container">
+                    ${avatarHTML}
+                    <div class="victory-player-reaction">${reactionEmoji}</div>
+                    ${isImpostor ? `<div class="victory-player-badge">IMPOSTOR</div>` : ''}
+                </div>
+                <div class="victory-player-name">${player.name}</div>
             </div>
-            <div class="result-word-item">
-                <span class="result-word-label">Impostor Word:</span>
-                <span class="result-word-value">${gameState.impostorWord.toUpperCase()}</span>
+        `;
+    }
+    
+    // Build victory screen based on outcome
+    let victoryHTML = '';
+    
+    if (isImpostorVictory) {
+        // IMPOSTOR VICTORY - Single Winner, Dark Theme
+        const impostor = winners[0];
+        const civilianCount = losers.length;
+        
+        const impostorMessages = [
+            'The deception was flawless',
+            'Master of manipulation',
+            'Perfect performance',
+            'The impostor has prevailed'
+        ];
+        
+        const randomMessage = impostorMessages[Math.floor(Math.random() * impostorMessages.length)];
+        
+        victoryHTML = `
+            <div class="result-screen result-impostor-victory">
+                <!-- Dark Background Effects -->
+                <div class="victory-background-dark"></div>
+                <div class="victory-fog-effect"></div>
+                <div class="victory-glitch-overlay"></div>
+                
+                <!-- Title Zone -->
+                <div class="victory-title-zone">
+                    <h1 class="victory-main-title impostor-title">IMPOSTOR WINS</h1>
+                    <p class="victory-subtitle">${randomMessage}</p>
+                </div>
+                
+                <!-- Center Focus: Impostor -->
+                <div class="victory-content-zone">
+                    <div class="victory-impostor-focus">
+                        ${generatePlayerCard(impostor, true)}
+                        <div class="victory-impostor-stats">
+                            <div class="victory-stat-item">
+                                <span class="victory-stat-label">Deceived</span>
+                                <span class="victory-stat-value">${civilianCount} ${civilianCount === 1 ? 'Civilian' : 'Civilians'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // CIVILIAN VICTORY - Multiple Winners, Bright Theme
+        const winnerCount = winners.length;
+        const impostor = losers[0]; // The caught impostor
+        
+        const civilianMessages = [
+            'The impostor has been eliminated',
+            'Justice prevails',
+            'The truth was revealed',
+            'Teamwork triumphs'
+        ];
+        
+        const randomMessage = civilianMessages[Math.floor(Math.random() * civilianMessages.length)];
+        
+        // Determine grid layout based on winner count
+        let gridClass = 'victory-grid-small';
+        if (winnerCount >= 5 && winnerCount <= 6) {
+            gridClass = 'victory-grid-medium';
+        } else if (winnerCount >= 7) {
+            gridClass = 'victory-grid-large';
+        }
+        
+        const winnersHTML = winners.map(playerData => generatePlayerCard(playerData, true)).join('');
+        
+        victoryHTML = `
+            <div class="result-screen result-civilian-victory">
+                <!-- Bright Background Effects -->
+                <div class="victory-background-bright"></div>
+                <div class="victory-light-rays"></div>
+                <div class="victory-particles-bright"></div>
+                
+                <!-- Title Zone -->
+                <div class="victory-title-zone">
+                    <h1 class="victory-main-title civilian-title">CIVILIANS WIN</h1>
+                    <p class="victory-subtitle">${randomMessage}</p>
+                </div>
+                
+                <!-- Winners Grid -->
+                <div class="victory-content-zone">
+                    <div class="victory-winners-grid ${gridClass}">
+                        ${winnersHTML}
+                    </div>
+                    <div class="victory-caught-impostor">
+                        <div class="victory-caught-label">The Impostor Was:</div>
+                        ${generatePlayerCard(impostor, false)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Common bottom zone (words and actions)
+    const actionsHTML = `
+        <div class="result-actions-zone">
+            <div class="result-words-badge">
+                <span class="result-word-badge-label">The Words Were:</span>
+                <div class="result-word-badge-content">
+                    <span class="result-word-badge-value">${gameState.commonWord.toUpperCase()}</span>
+                    <span class="result-word-badge-divider">VS</span>
+                    <span class="result-word-badge-value">${gameState.impostorWord.toUpperCase()}</span>
+                </div>
+            </div>
+            
+            <div class="result-actions">
+                <button class="btn-primary result-action-primary" id="play-again">
+                    <span class="btn-icon">🎮</span>
+                    <span class="btn-text">Play Again</span>
+                </button>
+                <div class="result-actions-secondary">
+                    <button class="btn-secondary result-action-btn" id="change-words">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">New Words</span>
+                    </button>
+                    <button class="btn-secondary result-action-btn" id="change-settings">
+                        <span class="btn-icon">⚙️</span>
+                        <span class="btn-text">New Game</span>
+                    </button>
+                    <button class="btn-secondary result-action-btn" id="exit-game">
+                        <span class="btn-icon">🚪</span>
+                        <span class="btn-text">Exit</span>
+                    </button>
+                </div>
             </div>
         </div>
     `;
-
+    
+    container.innerHTML = victoryHTML + actionsHTML;
+    
     showPhase('result');
     
-    // Staggered card animations
+    // Screen shake effects
+    if (isCivilianVictory) {
+        document.body.classList.add('victory-screen-shake');
+        setTimeout(() => document.body.classList.remove('victory-screen-shake'), 800);
+    } else {
+        document.body.classList.add('defeat-screen-shake');
+        setTimeout(() => document.body.classList.remove('defeat-screen-shake'), 800);
+    }
+    
+    // Staggered entrance animations
     setTimeout(() => {
-        const resultCards = container.querySelectorAll('.result-player-card');
-        resultCards.forEach((card, index) => {
-            setTimeout(() => {
+        if (isImpostorVictory) {
+            // Impostor victory: dramatic single character entrance
+            const impostorCard = container.querySelector('.victory-impostor-focus .victory-player-card');
+            if (impostorCard) {
+                impostorCard.style.opacity = '0';
+                impostorCard.style.transform = 'scale(0.5) translateY(50px)';
+                impostorCard.style.filter = 'blur(10px)';
+                setTimeout(() => {
+                    impostorCard.style.transition = 'all 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    requestAnimationFrame(() => {
+                        impostorCard.style.opacity = '1';
+                        impostorCard.style.transform = 'scale(1) translateY(0)';
+                        impostorCard.style.filter = 'blur(0)';
+                    });
+                }, 200);
+            }
+        } else {
+            // Civilian victory: staggered grid entrance
+            const winnerCards = container.querySelectorAll('.victory-winners-grid .victory-player-card');
+            winnerCards.forEach((card, index) => {
                 card.style.opacity = '0';
-                card.style.transform = 'scale(0.5)';
-                card.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-                requestAnimationFrame(() => {
-                    card.style.opacity = '1';
-                    card.style.transform = 'scale(1)';
-                });
-            }, index * 100);
-        });
-    }, 100);
+                card.style.transform = 'scale(0.8) translateY(30px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    requestAnimationFrame(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1) translateY(0)';
+                    });
+                }, index * 100);
+            });
+            
+            // Caught impostor appears after winners
+            const caughtImpostor = container.querySelector('.victory-caught-impostor .victory-player-card');
+            if (caughtImpostor) {
+                caughtImpostor.style.opacity = '0';
+                caughtImpostor.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    caughtImpostor.style.transition = 'all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    requestAnimationFrame(() => {
+                        caughtImpostor.style.opacity = '1';
+                        caughtImpostor.style.transform = 'scale(1)';
+                    });
+                }, winnerCards.length * 100 + 300);
+            }
+        }
+        
+        // Animate action buttons
+        setTimeout(() => {
+            const actionButtons = container.querySelectorAll('.result-actions button');
+            actionButtons.forEach((btn, index) => {
+                btn.style.opacity = '0';
+                btn.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    btn.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    requestAnimationFrame(() => {
+                        btn.style.opacity = '1';
+                        btn.style.transform = 'translateY(0)';
+                    });
+                }, index * 100);
+            });
+        }, isImpostorVictory ? 1500 : 2000);
+    }, 300);
 }
 
 // Restart Functions
