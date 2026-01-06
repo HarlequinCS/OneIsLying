@@ -53,7 +53,7 @@
     <link rel="manifest" href="images/site.webmanifest">
     
     <!-- Stylesheet with Cache Busting -->
-    <link rel="stylesheet" href="styles.css?v=2.3.0" media="all">
+    <link rel="stylesheet" href="styles.css?v=list-based-result-2026-01" media="all">
     
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -219,7 +219,9 @@
     <div id="result-phase" class="phase result-fullscreen" role="main" aria-label="Results" aria-hidden="true">
         <div class="container result-container">
             <div class="result-content-wrapper">
-                <div id="result-content"></div>
+                <div class="result-scale-wrapper" id="result-scale-wrapper">
+                    <div id="result-content"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -246,6 +248,77 @@
         </div>
     </div>
 
+    <!-- Onboarding Tutorial Modal -->
+    <div id="tutorial-modal" class="tutorial-modal" role="dialog" aria-labelledby="tutorial-title" aria-hidden="true">
+        <div class="tutorial-modal-content">
+            <div class="tutorial-header">
+                <h2 id="tutorial-title" class="tutorial-title">🎮 Welcome to One Is Lying!</h2>
+                <button class="tutorial-close" id="tutorial-close" aria-label="Close tutorial">×</button>
+            </div>
+            <div class="tutorial-body">
+                <div class="tutorial-section">
+                    <h3 class="tutorial-section-title">🎯 How to Play</h3>
+                    <p class="tutorial-text">
+                        <strong>One Is Lying</strong> is a social deduction party game where players must identify the impostor!
+                    </p>
+                    <ol class="tutorial-steps">
+                        <li><strong>Setup:</strong> Choose 3-10 players and select a game mode</li>
+                        <li><strong>Registration:</strong> Each player enters their name (and optionally takes a photo)</li>
+                        <li><strong>Word Reveal:</strong> Players secretly see their assigned word - one player gets a different word (the impostor!)</li>
+                        <li><strong>Discussion:</strong> Everyone describes their word without revealing it</li>
+                        <li><strong>Guess:</strong> Vote on who you think is the impostor</li>
+                        <li><strong>Results:</strong> See if you caught the impostor!</li>
+                    </ol>
+                </div>
+                <div class="tutorial-section">
+                    <h3 class="tutorial-section-title">👤 Player Roles</h3>
+                    <div class="tutorial-roles">
+                        <div class="tutorial-role">
+                            <span class="tutorial-role-icon">👥</span>
+                            <div>
+                                <strong>Civilians</strong>
+                                <p>Most players receive the same word. Your goal is to identify the impostor!</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-role">
+                            <span class="tutorial-role-icon">🕵️</span>
+                            <div>
+                                <strong>Impostor</strong>
+                                <p>One player gets a different word. Your goal is to blend in and avoid detection!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tutorial-section">
+                    <h3 class="tutorial-section-title">🎲 Game Modes</h3>
+                    <div class="tutorial-modes">
+                        <div class="tutorial-mode">
+                            <strong>Auto Generated</strong>
+                            <p>The game automatically selects similar word pairs for balanced gameplay.</p>
+                        </div>
+                        <div class="tutorial-mode">
+                            <strong>Custom Word</strong>
+                            <p>Players create their own word pool for maximum creativity!</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="tutorial-credit">
+                    <p class="tutorial-credit-text">Developed by <strong>Team ChendAwan</strong></p>
+                </div>
+            </div>
+            <div class="tutorial-footer">
+                <button class="btn-primary tutorial-start-btn" id="tutorial-start-btn" aria-label="Start playing">
+                    <span class="btn-icon">🎮</span>
+                    <span class="btn-text">Let's Play!</span>
+                </button>
+                <label class="tutorial-skip-label">
+                    <input type="checkbox" id="tutorial-dont-show" aria-label="Don't show this again">
+                    <span>Don't show this again</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
     <!-- Immediate accessibility fix - ensures setup phase is accessible before any focus attempts -->
     <script>
         // This runs immediately when the script tag is parsed, before app.js loads
@@ -264,7 +337,7 @@
     </footer>
     
     <!-- Main Application Script with Cache Busting -->
-    <script src="app.js?v=2.3.0" defer></script>
+    <script src="app.js?v=balanced-word-pairs-2026-01" defer></script>
     
     <!-- Production Error Handler -->
     <script>

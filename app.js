@@ -292,7 +292,8 @@ const DOM = {
             game: document.getElementById('game-modal'),
             camera: document.getElementById('camera-modal'),
             wordOverlay: document.getElementById('word-overlay'),
-            passOverlay: document.getElementById('pass-device-overlay')
+            passOverlay: document.getElementById('pass-device-overlay'),
+            tutorial: document.getElementById('tutorial-modal')
         };
         
         this.containers = {
@@ -357,6 +358,55 @@ function hideModal() {
     });
 })();
 
+// Onboarding Tutorial System
+const TutorialManager = {
+    storageKey: 'oneislying_tutorial_completed',
+    
+    init() {
+        // Check if tutorial should be shown
+        const tutorialCompleted = localStorage.getItem(this.storageKey);
+        if (!tutorialCompleted) {
+            // Show tutorial after a short delay for better UX
+            setTimeout(() => {
+                this.showTutorial();
+            }, 500);
+        }
+    },
+    
+    showTutorial() {
+        const modal = document.getElementById('tutorial-modal');
+        if (!modal) return;
+        
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        SoundManager.play('click');
+        
+        // Focus management
+        const startBtn = document.getElementById('tutorial-start-btn');
+        if (startBtn) {
+            setTimeout(() => startBtn.focus(), 100);
+        }
+    },
+    
+    hideTutorial(dontShowAgain = false) {
+        const modal = document.getElementById('tutorial-modal');
+        if (!modal) return;
+        
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        SoundManager.play('click');
+        
+        if (dontShowAgain) {
+            localStorage.setItem(this.storageKey, 'true');
+        }
+    },
+    
+    reset() {
+        // For testing/debugging - allows tutorial to show again
+        localStorage.removeItem(this.storageKey);
+    }
+};
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     DOM.init();
@@ -364,6 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupViewportFixes();
     initializeEventListeners();
     initializeSoundToggle();
+    TutorialManager.init();
     
     // Re-initialize phase accessibility states after DOM.init() caches elements
     const setupPhase = DOM.phases.setup;
@@ -398,6 +449,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Tutorial event listeners
+    const tutorialStart = document.getElementById('tutorial-start-btn');
+    const tutorialClose = document.getElementById('tutorial-close');
+    const tutorialDontShow = document.getElementById('tutorial-dont-show');
+    
+    if (tutorialStart) {
+        tutorialStart.addEventListener('click', () => {
+            const dontShow = tutorialDontShow?.checked || false;
+            TutorialManager.hideTutorial(dontShow);
+        });
+    }
+    
+    if (tutorialClose) {
+        tutorialClose.addEventListener('click', () => {
+            const dontShow = tutorialDontShow?.checked || false;
+            TutorialManager.hideTutorial(dontShow);
+        });
+    }
+    
+    // Close tutorial on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const tutorialModal = document.getElementById('tutorial-modal');
+            if (tutorialModal && tutorialModal.classList.contains('active')) {
+                const dontShow = tutorialDontShow?.checked || false;
+                TutorialManager.hideTutorial(dontShow);
+            }
+        }
+    });
     
     // Set version attribute for debugging
     document.documentElement.setAttribute('data-app-version', APP_VERSION);
@@ -563,38 +644,484 @@ function startGameSetup() {
     }
 }
 
-// Simple Word Database - Extremely Common Words Only
-const SIMPLE_WORDS = {
-    objects: ['cup', 'table', 'bag', 'shoe', 'phone', 'book', 'chair', 'lamp', 'pen', 'key', 'watch', 'glasses'],
-    food: ['rice', 'burger', 'milk', 'bread', 'apple', 'pizza', 'cake', 'coffee', 'tea', 'banana', 'egg', 'fish'],
-    places: ['school', 'beach', 'shop', 'park', 'home', 'kitchen', 'bedroom', 'garden', 'street', 'library', 'cafe', 'store'],
-    animals: ['cat', 'dog', 'bird', 'fish', 'horse', 'cow', 'pig', 'chicken', 'rabbit', 'mouse', 'sheep', 'duck'],
-    actions: ['sleep', 'eat', 'walk', 'run', 'jump', 'sit', 'stand', 'talk', 'read', 'write', 'play', 'dance']
+// Balanced Word Pair Database - Category-Based with Difficulty Levels
+// Rules: Same category, related but distinct, different by function/usage/form
+// Avoid: Synonyms, parent-child relationships, identical meanings
+
+const WORD_PAIR_DATABASE = {
+    // Hot Drinks - Medium Difficulty
+    'hot-drinks-1': {
+        category: 'Hot Drinks',
+        difficulty: 'Medium',
+        word1: 'coffee',
+        word2: 'tea',
+        reason: 'Both hot beverages, different preparation and flavor profiles'
+    },
+    'hot-drinks-2': {
+        category: 'Hot Drinks',
+        difficulty: 'Medium',
+        word1: 'hot chocolate',
+        word2: 'cocoa',
+        reason: 'Both chocolate-based, different forms (drink vs powder)'
+    },
+    
+    // Cold Beverages - Medium Difficulty
+    'cold-drinks-1': {
+        category: 'Cold Beverages',
+        difficulty: 'Medium',
+        word1: 'soda',
+        word2: 'juice',
+        reason: 'Both cold drinks, different sources (carbonated vs fruit)'
+    },
+    'cold-drinks-2': {
+        category: 'Cold Beverages',
+        difficulty: 'Medium',
+        word1: 'lemonade',
+        word2: 'iced tea',
+        reason: 'Both refreshing cold drinks, different bases'
+    },
+    
+    // Breakfast Foods - Medium Difficulty
+    'breakfast-1': {
+        category: 'Breakfast Foods',
+        difficulty: 'Medium',
+        word1: 'pancake',
+        word2: 'waffle',
+        reason: 'Both breakfast items, different cooking methods and textures'
+    },
+    'breakfast-2': {
+        category: 'Breakfast Foods',
+        difficulty: 'Medium',
+        word1: 'cereal',
+        word2: 'oatmeal',
+        reason: 'Both breakfast grains, different forms (dry vs cooked)'
+    },
+    'breakfast-3': {
+        category: 'Breakfast Foods',
+        difficulty: 'Medium',
+        word1: 'bagel',
+        word2: 'donut',
+        reason: 'Both round bread items, different preparation (boiled vs fried)'
+    },
+    
+    // Fruits - Medium Difficulty
+    'fruits-1': {
+        category: 'Fruits',
+        difficulty: 'Medium',
+        word1: 'apple',
+        word2: 'pear',
+        reason: 'Both tree fruits, different shapes and textures'
+    },
+    'fruits-2': {
+        category: 'Fruits',
+        difficulty: 'Medium',
+        word1: 'orange',
+        word2: 'grapefruit',
+        reason: 'Both citrus fruits, different sizes and flavors'
+    },
+    'fruits-3': {
+        category: 'Fruits',
+        difficulty: 'Medium',
+        word1: 'strawberry',
+        word2: 'raspberry',
+        reason: 'Both berries, different structures (solid vs hollow)'
+    },
+    
+    // Vegetables - Medium Difficulty
+    'vegetables-1': {
+        category: 'Vegetables',
+        difficulty: 'Medium',
+        word1: 'carrot',
+        word2: 'celery',
+        reason: 'Both crunchy vegetables, different colors and flavors'
+    },
+    'vegetables-2': {
+        category: 'Vegetables',
+        difficulty: 'Medium',
+        word1: 'broccoli',
+        word2: 'cauliflower',
+        reason: 'Both cruciferous vegetables, different colors'
+    },
+    'vegetables-3': {
+        category: 'Vegetables',
+        difficulty: 'Medium',
+        word1: 'potato',
+        word2: 'sweet potato',
+        reason: 'Both root vegetables, different colors and flavors'
+    },
+    
+    // Fast Food - Medium Difficulty
+    'fast-food-1': {
+        category: 'Fast Food',
+        difficulty: 'Medium',
+        word1: 'burger',
+        word2: 'hot dog',
+        reason: 'Both handheld foods, different meat forms (patty vs sausage)'
+    },
+    'fast-food-2': {
+        category: 'Fast Food',
+        difficulty: 'Medium',
+        word1: 'pizza',
+        word2: 'calzone',
+        reason: 'Both Italian foods, different forms (open vs folded)'
+    },
+    'fast-food-3': {
+        category: 'Fast Food',
+        difficulty: 'Medium',
+        word1: 'taco',
+        word2: 'burrito',
+        reason: 'Both Mexican foods, different wrapping (open vs closed)'
+    },
+    
+    // Containers - Medium Difficulty
+    'containers-1': {
+        category: 'Containers',
+        difficulty: 'Medium',
+        word1: 'cup',
+        word2: 'mug',
+        reason: 'Both drinking vessels, different shapes (tapered vs cylindrical)'
+    },
+    'containers-2': {
+        category: 'Containers',
+        difficulty: 'Medium',
+        word1: 'bottle',
+        word2: 'jar',
+        reason: 'Both storage containers, different openings (narrow vs wide)'
+    },
+    'containers-3': {
+        category: 'Containers',
+        difficulty: 'Medium',
+        word1: 'box',
+        word2: 'crate',
+        reason: 'Both storage containers, different materials (cardboard vs wood)'
+    },
+    
+    // Furniture - Medium Difficulty
+    'furniture-1': {
+        category: 'Furniture',
+        difficulty: 'Medium',
+        word1: 'chair',
+        word2: 'stool',
+        reason: 'Both seating, different back support (with vs without)'
+    },
+    'furniture-2': {
+        category: 'Furniture',
+        difficulty: 'Medium',
+        word1: 'table',
+        word2: 'desk',
+        reason: 'Both flat surfaces, different purposes (dining vs work)'
+    },
+    'furniture-3': {
+        category: 'Furniture',
+        difficulty: 'Medium',
+        word1: 'sofa',
+        word2: 'loveseat',
+        reason: 'Both seating furniture, different sizes (large vs small)'
+    },
+    
+    // Electronics - Medium Difficulty
+    'electronics-1': {
+        category: 'Electronics',
+        difficulty: 'Medium',
+        word1: 'phone',
+        word2: 'tablet',
+        reason: 'Both touchscreen devices, different sizes and primary uses'
+    },
+    'electronics-2': {
+        category: 'Electronics',
+        difficulty: 'Medium',
+        word1: 'laptop',
+        word2: 'desktop',
+        reason: 'Both computers, different portability (portable vs stationary)'
+    },
+    'electronics-3': {
+        category: 'Electronics',
+        difficulty: 'Medium',
+        word1: 'headphones',
+        word2: 'earbuds',
+        reason: 'Both audio devices, different form factors (over-ear vs in-ear)'
+    },
+    
+    // Clothing - Medium Difficulty
+    'clothing-1': {
+        category: 'Clothing',
+        difficulty: 'Medium',
+        word1: 'jacket',
+        word2: 'coat',
+        reason: 'Both outerwear, different lengths and formality'
+    },
+    'clothing-2': {
+        category: 'Clothing',
+        difficulty: 'Medium',
+        word1: 'sneakers',
+        word2: 'boots',
+        reason: 'Both footwear, different coverage (ankle vs higher)'
+    },
+    'clothing-3': {
+        category: 'Clothing',
+        difficulty: 'Medium',
+        word1: 'shorts',
+        word2: 'pants',
+        reason: 'Both legwear, different lengths (short vs long)'
+    },
+    
+    // Sports - Medium Difficulty
+    'sports-1': {
+        category: 'Sports',
+        difficulty: 'Medium',
+        word1: 'basketball',
+        word2: 'volleyball',
+        reason: 'Both ball sports, different court sizes and rules'
+    },
+    'sports-2': {
+        category: 'Sports',
+        difficulty: 'Medium',
+        word1: 'tennis',
+        word2: 'badminton',
+        reason: 'Both racket sports, different equipment and court sizes'
+    },
+    'sports-3': {
+        category: 'Sports',
+        difficulty: 'Medium',
+        word1: 'soccer',
+        word2: 'football',
+        reason: 'Both team sports, different ball types and rules'
+    },
+    
+    // Animals - Medium Difficulty
+    'animals-1': {
+        category: 'Animals',
+        difficulty: 'Medium',
+        word1: 'dog',
+        word2: 'wolf',
+        reason: 'Both canines, different domestication (domestic vs wild)'
+    },
+    'animals-2': {
+        category: 'Animals',
+        difficulty: 'Medium',
+        word1: 'cat',
+        word2: 'tiger',
+        reason: 'Both felines, different sizes and habitats'
+    },
+    'animals-3': {
+        category: 'Animals',
+        difficulty: 'Medium',
+        word1: 'duck',
+        word2: 'goose',
+        reason: 'Both waterfowl, different sizes and behaviors'
+    },
+    'animals-4': {
+        category: 'Animals',
+        difficulty: 'Medium',
+        word1: 'rabbit',
+        word2: 'hare',
+        reason: 'Both lagomorphs, different sizes and habitats'
+    },
+    
+    // Places - Educational - Medium Difficulty
+    'places-edu-1': {
+        category: 'Educational Places',
+        difficulty: 'Medium',
+        word1: 'library',
+        word2: 'bookstore',
+        reason: 'Both book places, different purposes (borrow vs buy)'
+    },
+    'places-edu-2': {
+        category: 'Educational Places',
+        difficulty: 'Medium',
+        word1: 'school',
+        word2: 'university',
+        reason: 'Both educational institutions, different levels'
+    },
+    
+    // Places - Commercial - Medium Difficulty
+    'places-com-1': {
+        category: 'Commercial Places',
+        difficulty: 'Medium',
+        word1: 'cafe',
+        word2: 'restaurant',
+        reason: 'Both food places, different service levels (casual vs full)'
+    },
+    'places-com-2': {
+        category: 'Commercial Places',
+        difficulty: 'Medium',
+        word1: 'mall',
+        word2: 'market',
+        reason: 'Both shopping places, different structures (indoor vs outdoor)'
+    },
+    
+    // Places - Outdoor - Medium Difficulty
+    'places-out-1': {
+        category: 'Outdoor Places',
+        difficulty: 'Medium',
+        word1: 'park',
+        word2: 'garden',
+        reason: 'Both green spaces, different scales (public vs private)'
+    },
+    'places-out-2': {
+        category: 'Outdoor Places',
+        difficulty: 'Medium',
+        word1: 'beach',
+        word2: 'lake',
+        reason: 'Both water places, different water types (salt vs fresh)'
+    },
+    
+    // Transportation - Medium Difficulty
+    'transport-1': {
+        category: 'Transportation',
+        difficulty: 'Medium',
+        word1: 'car',
+        word2: 'truck',
+        reason: 'Both vehicles, different sizes and purposes'
+    },
+    'transport-2': {
+        category: 'Transportation',
+        difficulty: 'Medium',
+        word1: 'bike',
+        word2: 'motorcycle',
+        reason: 'Both two-wheeled vehicles, different power (pedal vs engine)'
+    },
+    'transport-3': {
+        category: 'Transportation',
+        difficulty: 'Medium',
+        word1: 'bus',
+        word2: 'train',
+        reason: 'Both public transport, different tracks (road vs rail)'
+    },
+    
+    // Musical Instruments - Medium Difficulty
+    'music-1': {
+        category: 'Musical Instruments',
+        difficulty: 'Medium',
+        word1: 'guitar',
+        word2: 'ukulele',
+        reason: 'Both string instruments, different sizes and sounds'
+    },
+    'music-2': {
+        category: 'Musical Instruments',
+        difficulty: 'Medium',
+        word1: 'piano',
+        word2: 'keyboard',
+        reason: 'Both keyboard instruments, different mechanisms (acoustic vs electronic)'
+    },
+    'music-3': {
+        category: 'Musical Instruments',
+        difficulty: 'Medium',
+        word1: 'drum',
+        word2: 'tambourine',
+        reason: 'Both percussion instruments, different forms (membranophone vs idiophone)'
+    },
+    
+    // Weather - Medium Difficulty
+    'weather-1': {
+        category: 'Weather',
+        difficulty: 'Medium',
+        word1: 'rain',
+        word2: 'snow',
+        reason: 'Both precipitation, different forms (liquid vs solid)'
+    },
+    'weather-2': {
+        category: 'Weather',
+        difficulty: 'Medium',
+        word1: 'wind',
+        word2: 'breeze',
+        reason: 'Both air movement, different intensities (strong vs gentle)'
+    },
+    
+    // Body Parts - Medium Difficulty
+    'body-1': {
+        category: 'Body Parts',
+        difficulty: 'Medium',
+        word1: 'finger',
+        word2: 'toe',
+        reason: 'Both digits, different locations (hand vs foot)'
+    },
+    'body-2': {
+        category: 'Body Parts',
+        difficulty: 'Medium',
+        word1: 'elbow',
+        word2: 'knee',
+        reason: 'Both joints, different locations (arm vs leg)'
+    },
+    
+    // Easy Difficulty Pairs (for variety)
+    'easy-1': {
+        category: 'Colors',
+        difficulty: 'Easy',
+        word1: 'red',
+        word2: 'blue',
+        reason: 'Both primary colors, clearly distinct'
+    },
+    'easy-2': {
+        category: 'Shapes',
+        difficulty: 'Easy',
+        word1: 'circle',
+        word2: 'square',
+        reason: 'Both shapes, different forms (round vs angular)'
+    },
+    'easy-3': {
+        category: 'Time',
+        difficulty: 'Easy',
+        word1: 'morning',
+        word2: 'evening',
+        reason: 'Both times of day, clearly different periods'
+    }
 };
 
-const WORD_CATEGORIES = Object.keys(SIMPLE_WORDS);
+// Get all word pair keys
+const WORD_PAIR_KEYS = Object.keys(WORD_PAIR_DATABASE);
 
-// Auto Generated Words - Simple Words Only
+// Filter by difficulty (prefer Medium, but allow Easy for variety)
+function getWordPairsByDifficulty(preferredDifficulty = 'Medium') {
+    const allPairs = WORD_PAIR_KEYS.map(key => ({
+        key,
+        ...WORD_PAIR_DATABASE[key]
+    }));
+    
+    // Prefer medium difficulty, but include some easy for variety
+    const preferred = allPairs.filter(p => p.difficulty === preferredDifficulty);
+    const others = allPairs.filter(p => p.difficulty !== preferredDifficulty);
+    
+    // Return 80% preferred, 20% others for variety
+    return preferred.length > 0 ? preferred : allPairs;
+}
+
+// Auto Generated Words - Balanced Semantic Pairs
 function generateAutoWords() {
     try {
-        const category = WORD_CATEGORIES[Math.floor(Math.random() * WORD_CATEGORIES.length)];
-        const words = SIMPLE_WORDS[category];
+        // Get word pairs filtered by difficulty (prefer Medium)
+        const availablePairs = getWordPairsByDifficulty('Medium');
         
-        let word1Index = Math.floor(Math.random() * words.length);
-        let word2Index = Math.floor(Math.random() * words.length);
-        
-        while (word2Index === word1Index) {
-            word2Index = Math.floor(Math.random() * words.length);
+        if (availablePairs.length === 0) {
+            throw new Error('No word pairs available');
         }
         
-        gameState.commonWord = words[word1Index];
-        gameState.impostorWord = words[word2Index];
+        // Select a random word pair from available pairs
+        const randomIndex = Math.floor(Math.random() * availablePairs.length);
+        const selectedPair = availablePairs[randomIndex];
+        
+        // Randomly assign which word is common and which is impostor
+        // This adds variety while maintaining category balance
+        if (Math.random() > 0.5) {
+            gameState.commonWord = selectedPair.word1;
+            gameState.impostorWord = selectedPair.word2;
+        } else {
+            gameState.commonWord = selectedPair.word2;
+            gameState.impostorWord = selectedPair.word1;
+        }
+        
+        // Store pair metadata for potential future use (debugging, stats, etc.)
+        gameState.selectedPairCategory = selectedPair.category;
+        gameState.selectedPairDifficulty = selectedPair.difficulty;
         
         showRegistrationPhase();
     } catch (error) {
         handleError(error, 'generateAutoWords');
-        gameState.commonWord = 'cup';
-        gameState.impostorWord = 'glass';
+        // Fallback to a balanced pair
+        gameState.commonWord = 'coffee';
+        gameState.impostorWord = 'tea';
+        gameState.selectedPairCategory = 'Hot Drinks';
+        gameState.selectedPairDifficulty = 'Medium';
         showRegistrationPhase();
     }
 }
@@ -1242,6 +1769,14 @@ function confirmGuessFn() {
 
 // Result Phase - Role-Based Victory Screen
 function showResultPhase(isCorrect) {
+    // Recalculate density mode and scale when showing result phase (handles orientation changes)
+    const viewport = window.visualViewport;
+    const height = viewport ? viewport.height : window.innerHeight;
+    calculateDensityMode(height);
+    
+    // Show the result phase first to properly manage aria-hidden
+    showPhase('result');
+    
     const container = DOM.containers.result;
     if (!container) return;
     
@@ -1282,33 +1817,38 @@ function showResultPhase(isCorrect) {
         }
     });
     
-    // Generate player card HTML
-    function generatePlayerCard(playerData, isWinnerCard) {
+    // Generate result row HTML (list-based)
+    function generateResultRow(playerData, isWinner) {
         const { player, index, isImpostor } = playerData;
         
         let avatarHTML;
         if (player.avatar) {
-            avatarHTML = `<img src="${player.avatar}" class="victory-player-avatar" alt="${player.name}">`;
+            avatarHTML = `<img src="${player.avatar}" class="result-row-avatar" alt="${player.name}">`;
         } else {
             const svgData = generatePixelCharacter(index);
-            avatarHTML = `<img src="${svgData}" class="victory-player-avatar" alt="${player.name}">`;
+            avatarHTML = `<img src="${svgData}" class="result-row-avatar" alt="${player.name}">`;
         }
         
-        const reactionEmoji = isWinnerCard 
-            ? (isImpostor ? '😎' : '🎉')
-            : (isImpostor ? '😵' : '😮');
+        const roleIcon = isImpostor ? '🕵️' : '👥';
+        const roleText = isImpostor ? 'Impostor' : 'Civilian';
+        const rowClass = isImpostor ? 'result-row-impostor' : (isWinner ? 'result-row-winner' : 'result-row-loser');
         
         return `
-            <div class="victory-player-card ${isWinnerCard ? 'victory-winner' : 'victory-loser'}" 
+            <div class="result-row ${rowClass}" 
                  data-player-index="${index}"
                  role="article"
-                 aria-label="${player.name}${isImpostor ? ' (Impostor)' : ' (Civilian)'}">
-                <div class="victory-player-avatar-container">
+                 aria-label="${player.name} - ${roleText}">
+                <div class="result-row-avatar-wrapper">
                     ${avatarHTML}
-                    <div class="victory-player-reaction">${reactionEmoji}</div>
-                    ${isImpostor ? `<div class="victory-player-badge">IMPOSTOR</div>` : ''}
                 </div>
-                <div class="victory-player-name">${player.name}</div>
+                <div class="result-row-content">
+                    <div class="result-row-name">${player.name}</div>
+                    <div class="result-row-role">
+                        <span class="result-row-role-icon">${roleIcon}</span>
+                        <span class="result-row-role-text">${roleText}</span>
+                    </div>
+                </div>
+                ${isWinner ? '<div class="result-row-badge">WINNER</div>' : ''}
             </div>
         `;
     }
@@ -1330,6 +1870,10 @@ function showResultPhase(isCorrect) {
         
         const randomMessage = impostorMessages[Math.floor(Math.random() * impostorMessages.length)];
         
+        // Generate all players as rows (impostor first, then civilians)
+        const allPlayers = [impostor, ...losers];
+        const rowsHTML = allPlayers.map(playerData => generateResultRow(playerData, playerData === impostor)).join('');
+        
         victoryHTML = `
             <div class="result-screen result-impostor-victory">
                 <!-- Dark Background Effects -->
@@ -1343,15 +1887,15 @@ function showResultPhase(isCorrect) {
                     <p class="victory-subtitle">${randomMessage}</p>
                 </div>
                 
-                <!-- Center Focus: Impostor -->
+                <!-- Players List -->
                 <div class="victory-content-zone">
-                    <div class="victory-impostor-focus">
-                        ${generatePlayerCard(impostor, true)}
-                        <div class="victory-impostor-stats">
-                            <div class="victory-stat-item">
-                                <span class="victory-stat-label">Deceived</span>
-                                <span class="victory-stat-value">${civilianCount} ${civilianCount === 1 ? 'Civilian' : 'Civilians'}</span>
-                            </div>
+                    <div class="result-players-list">
+                        ${rowsHTML}
+                    </div>
+                    <div class="result-stats-box">
+                        <div class="result-stat-item">
+                            <span class="result-stat-label">Deceived</span>
+                            <span class="result-stat-value">${civilianCount} ${civilianCount === 1 ? 'Civilian' : 'Civilians'}</span>
                         </div>
                     </div>
                 </div>
@@ -1371,15 +1915,22 @@ function showResultPhase(isCorrect) {
         
         const randomMessage = civilianMessages[Math.floor(Math.random() * civilianMessages.length)];
         
-        // Determine grid layout based on winner count
+        // Determine grid layout based on winner count (responsive scaling)
         let gridClass = 'victory-grid-small';
         if (winnerCount >= 5 && winnerCount <= 6) {
             gridClass = 'victory-grid-medium';
-        } else if (winnerCount >= 7) {
+        } else if (winnerCount >= 7 && winnerCount <= 8) {
             gridClass = 'victory-grid-large';
+        } else if (winnerCount >= 9) {
+            gridClass = 'victory-grid-very-large';
         }
         
-        const winnersHTML = winners.map(playerData => generatePlayerCard(playerData, true)).join('');
+        // Generate all players as rows (winners first, then impostor)
+        const allPlayers = [...winners, impostor];
+        const rowsHTML = allPlayers.map(playerData => {
+            const isWinner = winners.includes(playerData);
+            return generateResultRow(playerData, isWinner);
+        }).join('');
         
         victoryHTML = `
             <div class="result-screen result-civilian-victory">
@@ -1394,14 +1945,10 @@ function showResultPhase(isCorrect) {
                     <p class="victory-subtitle">${randomMessage}</p>
                 </div>
                 
-                <!-- Winners Grid -->
+                <!-- Players List -->
                 <div class="victory-content-zone">
-                    <div class="victory-winners-grid ${gridClass}">
-                        ${winnersHTML}
-                    </div>
-                    <div class="victory-caught-impostor">
-                        <div class="victory-caught-label">The Impostor Was:</div>
-                        ${generatePlayerCard(impostor, false)}
+                    <div class="result-players-list">
+                        ${rowsHTML}
                     </div>
                 </div>
             </div>
@@ -1456,74 +2003,29 @@ function showResultPhase(isCorrect) {
         setTimeout(() => document.body.classList.remove('defeat-screen-shake'), 800);
     }
     
-    // Staggered entrance animations
+    // Staggered entrance animations for rows
     setTimeout(() => {
-        if (isImpostorVictory) {
-            // Impostor victory: dramatic single character entrance
-            const impostorCard = container.querySelector('.victory-impostor-focus .victory-player-card');
-            if (impostorCard) {
-                impostorCard.style.opacity = '0';
-                impostorCard.style.transform = 'scale(0.5) translateY(50px)';
-                impostorCard.style.filter = 'blur(10px)';
-                setTimeout(() => {
-                    impostorCard.style.transition = 'all 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-                    requestAnimationFrame(() => {
-                        impostorCard.style.opacity = '1';
-                        impostorCard.style.transform = 'scale(1) translateY(0)';
-                        impostorCard.style.filter = 'blur(0)';
-                    });
-                }, 200);
-            }
-        } else {
-            // Civilian victory: staggered grid entrance
-            const winnerCards = container.querySelectorAll('.victory-winners-grid .victory-player-card');
-            winnerCards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'scale(0.8) translateY(30px)';
-                setTimeout(() => {
-                    card.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-                    requestAnimationFrame(() => {
-                        card.style.opacity = '1';
-                        card.style.transform = 'scale(1) translateY(0)';
-                    });
-                }, index * 100);
-            });
-            
-            // Caught impostor appears after winners
-            const caughtImpostor = container.querySelector('.victory-caught-impostor .victory-player-card');
-            if (caughtImpostor) {
-                caughtImpostor.style.opacity = '0';
-                caughtImpostor.style.transform = 'scale(0.9)';
-                setTimeout(() => {
-                    caughtImpostor.style.transition = 'all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-                    requestAnimationFrame(() => {
-                        caughtImpostor.style.opacity = '1';
-                        caughtImpostor.style.transform = 'scale(1)';
-                    });
-                }, winnerCards.length * 100 + 300);
-            }
-        }
+        const rows = container.querySelectorAll('.result-row');
+        rows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                row.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                requestAnimationFrame(() => {
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateX(0)';
+                });
+            }, index * 80);
+        });
         
-        // Animate action buttons
-        setTimeout(() => {
-            const actionButtons = container.querySelectorAll('.result-actions button');
-            actionButtons.forEach((btn, index) => {
-                btn.style.opacity = '0';
-                btn.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    btn.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-                    requestAnimationFrame(() => {
-                        btn.style.opacity = '1';
-                        btn.style.transform = 'translateY(0)';
-                    });
-                }, index * 100);
-            });
-        }, isImpostorVictory ? 1500 : 2000);
+        // Action buttons are animated via CSS with proper delays
+        // CSS handles: primary button (1.5s impostor / 2s civilian), secondary buttons (1.6s, 1.7s, 1.8s)
     }, 300);
 }
 
 // Restart Functions
 function playAgainFn() {
+    // Reset game state but keep players and mode
     gameState.revealedPlayers.clear();
     gameState.selectedImpostor = null;
     gameState.timerStart = null;
@@ -1531,17 +2033,20 @@ function playAgainFn() {
     gameState.registrationStep = 'name';
     stopTimer();
     
-    gameState.players.forEach(player => {
-        player.word = null;
-    });
-    
+    // Both modes: Generate new words and go directly to word reveal
+    // This follows the Custom Word flow - skip registration, go straight to reveal
     if (gameState.gameMode === 'custom') {
+        // Custom mode: Use existing word pool to generate new word pair
         if (gameState.wordPool.length >= 2) {
             const shuffled = [...gameState.wordPool].sort(() => Math.random() - 0.5);
             gameState.commonWord = shuffled[0];
             gameState.impostorWord = shuffled[1] || shuffled[0];
+            
+            // Assign new impostor randomly
             const impostorIndex = Math.floor(Math.random() * gameState.playerCount);
             gameState.impostorPlayerIndex = impostorIndex;
+            
+            // Assign words to players
             gameState.players.forEach((player, index) => {
                 if (index === impostorIndex) {
                     player.word = gameState.impostorWord;
@@ -1549,13 +2054,57 @@ function playAgainFn() {
                     player.word = gameState.commonWord;
                 }
             });
-            gameState.revealedPlayers.clear();
+            
+            // Go directly to word reveal phase
             showWordRevealPhase();
         } else {
+            // Fallback: If no word pool, go to registration
+            gameState.wordPool = [];
             showRegistrationPhase();
         }
     } else {
-        generateAutoWords();
+        // Auto mode: Generate new words and go directly to word reveal
+        // Generate new word pair using category-based system
+        const availablePairs = getWordPairsByDifficulty('Medium');
+        const randomIndex = Math.floor(Math.random() * availablePairs.length);
+        const selectedPair = availablePairs[randomIndex];
+        
+        // Randomly assign which word is common and which is impostor
+        if (Math.random() > 0.5) {
+            gameState.commonWord = selectedPair.word1;
+            gameState.impostorWord = selectedPair.word2;
+        } else {
+            gameState.commonWord = selectedPair.word2;
+            gameState.impostorWord = selectedPair.word1;
+        }
+        
+        gameState.selectedPairCategory = selectedPair.category;
+        gameState.selectedPairDifficulty = selectedPair.difficulty;
+        
+        // Randomly assign which word is common and which is impostor
+        if (Math.random() > 0.5) {
+            gameState.commonWord = pair.common;
+            gameState.impostorWord = pair.impostor;
+        } else {
+            gameState.commonWord = pair.impostor;
+            gameState.impostorWord = pair.common;
+        }
+        
+        // Assign new impostor randomly
+        const impostorIndex = Math.floor(Math.random() * gameState.playerCount);
+        gameState.impostorPlayerIndex = impostorIndex;
+        
+        // Assign words to players
+        gameState.players.forEach((player, index) => {
+            if (index === impostorIndex) {
+                player.word = gameState.impostorWord;
+            } else {
+                player.word = gameState.commonWord;
+            }
+        });
+        
+        // Go directly to word reveal phase
+        showWordRevealPhase();
     }
 }
 
@@ -1628,13 +2177,102 @@ function setupViewportFixes() {
 
         document.documentElement.style.setProperty('--app-height', `${height}px`);
         document.documentElement.style.setProperty('--safe-bottom-js', `${bottomInset}px`);
+        
+        // Calculate and set density mode
+        calculateDensityMode(height);
     };
 
     setHeights();
+    
+    // Initialize scale calculation
+    const viewport = window.visualViewport;
+    const initialHeight = viewport ? viewport.height : window.innerHeight;
+    calculateResultScale(initialHeight);
 
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', setHeights);
+        window.visualViewport.addEventListener('resize', () => {
+            const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            calculateResultScale(height);
+        });
     }
-    window.addEventListener('orientationchange', setHeights);
-    window.addEventListener('resize', setHeights);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            setHeights();
+            const viewport = window.visualViewport;
+            const height = viewport ? viewport.height : window.innerHeight;
+            calculateResultScale(height);
+        }, 100);
+    });
+    window.addEventListener('resize', () => {
+        const viewport = window.visualViewport;
+        const height = viewport ? viewport.height : window.innerHeight;
+        calculateResultScale(height);
+    });
+}
+
+/* ============================================
+   Density-Based Layout System (iOS Safari Resilience)
+   ============================================ */
+function calculateDensityMode(viewportHeight) {
+    // Use viewport height directly for density calculation
+    // Safe areas are handled by CSS padding, so viewport height is the key metric
+    // Density thresholds based on viewport height:
+    // - Compact: < 600px (iPhone SE: 568px, older small devices)
+    // - Balanced: 600px - 850px (Most modern phones)
+    // - Comfortable: > 850px (iPhone 16 Pro Max: 932px, tall devices)
+    
+    let densityMode;
+    
+    if (viewportHeight < 600) {
+        // Very short screens (iPhone SE, older small devices)
+        densityMode = 'compact';
+    } else if (viewportHeight < 850) {
+        // Average to tall phones
+        densityMode = 'balanced';
+    } else {
+        // Very tall screens (iPhone 16 Pro Max, etc.)
+        densityMode = 'comfortable';
+    }
+    
+    // Apply density mode to body
+    document.body.setAttribute('data-density', densityMode);
+    
+    // Store as CSS variable for use in CSS
+    document.documentElement.style.setProperty('--density-mode', densityMode);
+    document.documentElement.style.setProperty('--usable-height', `${viewportHeight}px`);
+    
+    // Calculate and apply scale fallback for extremely small viewports
+    calculateResultScale(viewportHeight);
+}
+
+/* ============================================
+   Conditional Scale Fallback (Last Resort)
+   ============================================ */
+function calculateResultScale(viewportHeight) {
+    // Design baseline: 700px is our target comfortable height
+    const designBaselineHeight = 700;
+    
+    // Critical threshold: Only scale below 600px usable height
+    const criticalThreshold = 600;
+    
+    // Only apply scale fallback on extremely small viewports
+    if (viewportHeight > criticalThreshold) {
+        // Viewport is large enough - remove scaling
+        document.documentElement.style.setProperty('--result-scale', '1');
+        document.body.removeAttribute('data-result-scaled');
+        return;
+    }
+    
+    // Calculate scale dynamically
+    let scale = viewportHeight / designBaselineHeight;
+    
+    // Clamp scale to safe range (never below 0.85 to preserve readability)
+    scale = Math.max(0.85, Math.min(1, scale));
+    
+    // Apply scale as CSS variable
+    document.documentElement.style.setProperty('--result-scale', scale.toString());
+    
+    // Add data attribute for CSS targeting
+    document.body.setAttribute('data-result-scaled', 'true');
 }
