@@ -514,7 +514,7 @@ function initializeEventListeners() {
     
     if (increaseBtn) {
         increaseBtn.addEventListener('click', () => {
-            if (gameState.playerCount < 10) {
+            if (gameState.playerCount < 30) {
                 gameState.playerCount++;
                 if (DOM.inputs.playerCount) {
                     DOM.inputs.playerCount.value = gameState.playerCount;
